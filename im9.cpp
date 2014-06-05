@@ -1,0 +1,298 @@
+//im9.cpp
+//implementation file for reading data from PX4FMU
+
+#include <pthread.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <iostream.h>
+
+#include "uav.h"
+#include "state.h"
+#include "im9.h"
+#include "mavlink/v1.0/common/mavlink.h"
+
+extern clsState _state;
+
+clsIM9::clsIM9()
+{
+	m_nsIM9 = -1;
+	m_nIM9  = 0;
+	pthread_mutexattr_t attr;
+	pthread_mutexattr_init(&attr);
+	pthread_mutex_init(&m_mtxIM9, &attr);
+	m_bSAFMC2014DropTarget = false;
+}
+
+clsIM9::~clsIM9()
+{
+	pthread_mutex_destroy(&m_mtxIM9);
+}
+
+BOOL clsIM9::InitThread()
+{
+    // Setup serial port to communicate with PX4FMU
+//    m_nsIM9= ::open("/dev/ser2", O_RDWR | O_NOCTTY | O_NDELAY);
+	m_nsIM9= ::open("/dev/ser2", O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK);
+	if (m_nsIM9 == -1)
+	{
+		printf("[IM9] Could not open port! \n");
+		return FALSE;
+	}
+
+    termios term;
+    memset(&term, 0, sizeof(term));
+    tcgetattr(m_nsIM9, &term);
+    speed_t baudrate = 115200; //921600; //230400
+    cfsetispeed(&term, baudrate);
+    cfsetospeed(&term, baudrate);
+
+    // Input flags - Turn off input processing
+    // convert break to null byte, no CR to NL translation,
+    // no NL to CR translation, don't mark parity errors or breaks
+    // no input parity check, don't strip high bit off,
+    // no XON/XOFF software flow control
+    term.c_iflag &= ~(IGNBRK | BRKINT | ICRNL | INLCR | PARMRK | INPCK | ISTRIP | IXON);
+
+    // Output flags - Turn off output processing
+    // no CR to NL translation, no NL to CR-NL translation,
+    // no NL to CR translation, no column 0 CR suppression,
+    // no Ctrl-D suppression, no fill characters, no case mapping,
+    // no local output processing
+    term.c_oflag &= ~(OCRNL | ONLCR | ONLRET | ONOCR | OFILL | OPOST);
+
+    // No line processing:
+    // echo off, echo newline off, canonical mode off,
+    // extended input processing off, signal chars off
+    term.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN | ISIG);
+
+    // Turn off character processing
+    // clear current char size mask, no parity checking,
+    // no output processing, force 8 bit input
+    term.c_cflag &= ~(CSIZE | PARENB);
+    term.c_cflag |= CS8;
+
+    // One input byte is enough to return from read()
+    // Inter-character timer off
+    term.c_cc[VMIN]  = 1;
+    term.c_cc[VTIME] = 10; // was 0
+
+	tcsetattr(m_nsIM9, TCSANOW, &term);
+	tcflush(m_nsIM9, TCIOFLUSH);
+
+    printf("[IM9] Start\n");
+	return TRUE;
+}
+
+void clsIM9::ExitThread()
+{
+	::close(m_nsIM9);
+	printf("[IM9] quit\n");
+}
+
+int clsIM9::EveryRun()
+{
+	HELICOPTERRUDDER sig;
+	_state.GetSIG(&sig);
+
+	char buf[300];
+	mavlink_message_t message;
+
+//	double t = ::GetTime();
+	mavlink_set_quad_swarm_roll_pitch_yaw_thrust_t sp;
+	sp.group 		= 0;
+	sp.mode 		= 2;
+	sp.roll[0] 		= INT16_MAX * sig.aileron;
+	sp.pitch[0] 	= INT16_MAX * sig.elevator;
+	sp.yaw[0] 		= INT16_MAX * sig.rudder;
+	sp.thrust[0] 	= UINT16_MAX * sig.throttle;
+
+	sp.pitch[1] 	= INT16_MAX * sig.laser;
+	sp.yaw[1] 		= INT16_MAX * 0.0f;
+	sp.thrust[1] 	= INT16_MAX * 0.0f;
+
+	if (m_bSAFMC2014DropTarget){
+		sp.roll[1] 		= INT16_MAX * 1;
+	}
+	else{
+		sp.roll[1] 		= INT16_MAX * (-0.5);
+	}
+
+	mavlink_msg_set_quad_swarm_roll_pitch_yaw_thrust_encode(0, 200, &message, &sp);
+	unsigned len = mavlink_msg_to_send_buffer((uint8_t*)buf, &message);
+
+	write(m_nsIM9, buf, len);
+
+	double tPack = ::GetTime();
+	PX4Update(m_im90);
+
+    //_state.Update(tPack, &m_im90);
+
+	pthread_mutex_lock(&m_mtxIM9);
+	if (m_nIM9 < MAX_IM9PACK)
+	{
+		m_tIM9[m_nIM9] = tPack;
+
+		m_MAN[m_nIM9].aileron = m_im90.ail;
+		m_MAN[m_nIM9].elevator = m_im90.ele;
+		m_MAN[m_nIM9].throttle = m_im90.thr;
+		m_MAN[m_nIM9].rudder = m_im90.rud;
+		m_MAN[m_nIM9].sv6 = m_im90.tog;
+
+		m_nIM9++;
+	}
+	pthread_mutex_unlock(&m_mtxIM9);
+
+    UAVSTATE &state = _state.GetState();
+    if (m_nCount%50 == 0)
+	{
+//		cout<<"Attitude:\t"<<state.a<<" \t"<<state.b<<" \t"<<state.c<<endl;
+//		cout<<"Acceleration:\t"<<state.acx<<" \t"<<state.acy<<" \t"<<state.acz<<endl;
+//		cout<<"Position:\t"<<state.x<<" \t"<<state.y<<" \t"<<state.z<<endl;
+//		cout<<"Control:\t"<<sig.aileron<<" \t"<<sig.elevator<<" \t"<<sig.throttle<<" \t"<<sig.rudder<<endl<<endl;
+	}
+
+	return TRUE;
+}
+
+void clsIM9::PX4Update(IM9PACK& pack)
+{
+	mavlink_status_t lastStatus;
+	lastStatus.packet_rx_drop_count = 0;
+
+	uint8_t cp[2014];
+	int count = read(m_nsIM9, cp, 2014);
+
+//	printf("[IM9] Read %d bytes\n", count);
+	for (int i=0; i<count; i++)
+	{
+		mavlink_message_t message;
+		mavlink_status_t status;
+		uint8_t msgReceived = false;
+
+		// Check if a message could be decoded, return the message in case yes
+		msgReceived = mavlink_parse_char(MAVLINK_COMM_1, cp[i], &message, &status);
+		if (lastStatus.packet_rx_drop_count != status.packet_rx_drop_count)
+		{
+			printf("ERROR: DROPPED %d PACKETS\n", status.packet_rx_drop_count);
+			if (1)
+			{
+				unsigned char v=cp[i];
+				fprintf(stderr,"%02x ", v);
+			}
+		}
+		lastStatus = status;
+
+		if (msgReceived) {
+
+			if (0) { // for debug
+				fprintf(stderr,"Received serial data: ");
+				unsigned int i;
+				uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
+				unsigned int messageLength = mavlink_msg_to_send_buffer(buffer, &message);
+				if (messageLength > MAVLINK_MAX_PACKET_LEN)
+				{
+					fprintf(stderr, "\nFATAL ERROR: MESSAGE LENGTH IS LARGER THAN BUFFER SIZE\n");
+				}
+				else
+				{
+					for (i=0; i<messageLength; i++)
+					{
+						unsigned char v=buffer[i];
+						fprintf(stderr,"%02x ", v);
+					}
+					fprintf(stderr,"\n");
+				}
+			}
+
+			static unsigned int scaled_imu_receive_counter = 0;
+			static unsigned int scaled_att_receive_counter = 0;
+
+			switch (message.msgid) {
+
+	    		case MAVLINK_MSG_ID_HIGHRES_IMU:
+
+					mavlink_highres_imu_t imu;
+					mavlink_msg_highres_imu_decode(&message, &imu);
+
+					if (scaled_imu_receive_counter%10 == 0) {
+//						printf("Got message HIGHRES_IMU \n");
+//						printf("\t time: %llu\n", imu.time_usec);
+//						printf("\t acc  (NED):\t% f\t% f\t% f (m/s^2)\n", imu.xacc, imu.yacc, imu.zacc);
+//						printf("\t gyro (NED):\t% f\t% f\t% f (rad/s)\n", imu.xgyro, imu.ygyro, imu.zgyro);
+//						printf("\t mag  (NED):\t% f\t% f\t% f (Ga)\n", imu.xmag, imu.ymag, imu.zmag);
+//						printf("\t baro: \t %f (mBar)\n", imu.abs_pressure);
+//						printf("\t altitude: \t %f (m)\n", imu.pressure_alt);
+//						printf("\t temperature: \t %f C\n", imu.temperature);
+//						printf("\n");
+					}
+
+					pack.acx = imu.xacc;
+					pack.acy = imu.yacc;
+					pack.acz = imu.zacc;
+
+					scaled_imu_receive_counter++;
+					break;
+
+
+				case MAVLINK_MSG_ID_ATTITUDE:
+
+					mavlink_attitude_t attitude;
+					mavlink_msg_attitude_decode(&message, &attitude);
+
+					if (scaled_att_receive_counter%10 == 0) {
+//						printf("Got message ATTITUDE \n");
+//						printf("\t time: %llu\n", attitude.time_boot_ms);
+//						printf("\t attitude:\t% f\t% f\t% f (rad)\n", attitude.roll, attitude.pitch, attitude.yaw);
+//						printf("\t att speed:\t% f\t% f\t% f (rad/s)\n", attitude.rollspeed, attitude.pitchspeed, attitude.yawspeed);
+//						printf("\n");
+					}
+
+					// Update pack
+					pack.a = attitude.roll;
+					pack.b = attitude.pitch;
+					pack.c = attitude.yaw;
+					pack.p = attitude.rollspeed;
+					pack.q = attitude.pitchspeed;
+					pack.r = attitude.yawspeed;
+
+					scaled_att_receive_counter++;
+
+					break;
+
+				case MAVLINK_MSG_ID_MANUAL_CONTROL:
+
+//					mavlink_rc_channels_scaled_t rc_channels_scaled;
+//					mavlink_msg_rc_channels_scaled_decode(&message, &rc_channels_scaled);
+//
+//					printf("Got message RC_channel_scaled \n");
+//					printf("attitude:\t% f\t% f\t% f (rad)\n", attitude.roll, attitude.pitch, attitude.yaw);
+//					printf("att speed:\t% f\t% f\t% f (rad/s)\n", attitude.rollspeed, attitude.pitchspeed, attitude.yawspeed);
+//					printf("\n");
+//
+//					// Update pack
+//					pack.ail = (double)rc_channels_scaled.chan1_scaled / 10000.0;
+//					pack.ele = (double)rc_channels_scaled.chan2_scaled / 10000.0;
+//					pack.thr = (double)rc_channels_scaled.chan3_scaled / 10000.0 + 0.5;
+//					pack.rud = (double)rc_channels_scaled.chan4_scaled / 10000.0;
+//					pack.tog = (double)rc_channels_scaled.chan6_scaled / 10000.0;
+//
+//					cout << "Got message RC_channel_scaled" << endl;
+//					cout << "Ch1: " << pack.ail << endl;
+//					cout << "Ch2: " << pack.ele << endl;
+//					cout << "Ch3: " << pack.thr << endl;
+//					cout << "Ch4: " << pack.rud << endl;
+//					cout << "Ch6: " << pack.tog << endl;
+
+					break;
+
+				default:
+					break;
+			}
+		}
+	}
+}
+
