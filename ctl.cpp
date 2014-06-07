@@ -2285,14 +2285,14 @@ void clsCTL::A8()				//for engine up and down control (auto takeoff/landing)
 			double TUP = 3;
 			// 0-4s increase throttle to 80% trim value
 			if (t> 0 && t <= TUP) {
-					m_sig.throttle = (SAFMC2014_THROTTLE_LOW*(TUP-t) + A2_equ.et*0.8*t)/TUP;
+					m_sig.throttle = (SAFMC2014_THROTTLE_LOW*(TUP-t) + _equ_Hover.et*0.8*t)/TUP;
 			}
 			else if ( t> TUP ) {
 					_state.SetEvent(EVENT_BEHAVIOREND, BEHAVIOR_ENGINEUP);
 					cout<<"Rotor warm-up event end at "<<::GetTime()<<endl;
 			}
-			if (m_nCount % 50 == 0){
-				printf("[ctl:A8] time %.2f: aileron %.3f, elevator %.3f, rudder %.3f, throttle %.3f\n", t, m_sig.aileron, m_sig.elevator, m_sig.rudder, m_sig.throttle);
+			if (m_nCount%100 == 0){
+				printf("[ctl:A8] time %.2f: throttle %.3f; A2_equ.et %.2f\n", t, m_sig.throttle, A2_equ.et);
 			}
 		}
 	}
@@ -6192,7 +6192,6 @@ void clsCTL::Init()
 // A1 equ and F, G are dynamically decided by A1_Lookup (gain schedule)
 
 	A2_equ = _equ_Hover;
-
 	A2_pVel = NULL;
 	A2_bEnd = TRUE;
 	A2_bbEnd = FALSE;
@@ -6613,8 +6612,16 @@ int cls2014SAFMCPlan::Run(){
 			break;
 		case TASK:
 			if ( (event.code == EVENT_BEHAVIOREND && (int &)event.info[0] == BEHAVIOR_ENGINEDOWN) ){
+				m_mode = ENGINE_UP_AFTER_TASK;
+				_ctl.ResetIntegratorFlag();
+				m_behavior.behavior = BEHAVIOR_ENGINEUP;
+			}
+			break;
+	    case ENGINE_UP_AFTER_TASK:
+			if (event.code == EVENT_BEHAVIOREND && (int &)event.info[0] == BEHAVIOR_ENGINEUP) {
 				_state.ClearEvent();
 				m_mode = TRANSITION_2;
+				_ctl.SetIntegratorFlag();
 				_ctl.SetTransition2Flag();
 				m_behavior.behavior = BEHAVIOR_PATHA;
 			}
@@ -6970,13 +6977,13 @@ void clsCTL::ConstructTakeOffPath(UAVSTATE state, double height, double pnr[4], 
 	static int count = 0;
 	count++;
 	if (count > 1e7) count = 0;
-	if(count%50 == 0){
+	if(count%100 == 0){
 		printf("[ctl:TakeOffPath] totalPathTime %.2f; pnr: %.2f %.2f %.2f %.2f; vnr: %.2f %.2f %.2f\n", pathTotalTime, pnr[0], pnr[1], pnr[2], pnr[3], vnr[0], vnr[1], vnr[2]);
 	}
 	if (tElapse > pathTotalTime){
 		_ctl.SetIntegratorFlag();
 	}
-	if (tElapse > pathTotalTime + 15){
+	if (tElapse > pathTotalTime){
 		B5_t2 = -1;
 		m_bSAFMCPathTotalTimeGetted = false;
 		_state.SetEvent(EVENT_BEHAVIOREND, BEHAVIOR_PATHA);
@@ -7055,7 +7062,7 @@ void clsCTL::ConstructTransition1PathRef(double outerRefPos[4], double outerRefV
 
 		ReflexxesPathPlanning(_state.GetState(), temp_TransitionFinalRef, outerRefPos, outerRefVel, outerRefAcc);
 
-		if(m_nCount%50 == 0){
+		if(m_nCount%100 == 0){
 			printf("[ctl:Transition-1 Path] totalPathTime %.2f; pnr: %.2f %.2f %.2f %.2f; vnr: %.2f %.2f %.2f\n", pathTotalTime, outerRefPos[0], outerRefPos[1], outerRefPos[2], outerRefPos[3], outerRefVel[0], outerRefVel[1], outerRefVel[2]);
 		}
 }
@@ -7146,23 +7153,26 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 		temp_visionGuidanceFinalRef.p_x_r = _cam.GetVisionTargetInfo().nedFrame_dvec[0] + outerRefPos[0];
 		temp_visionGuidanceFinalRef.p_y_r = _cam.GetVisionTargetInfo().nedFrame_dvec[1] + outerRefPos[1];
 		if (sqrt(pow(_cam.GetVisionTargetInfo().nedFrame_dvec[0], 2) + pow(_cam.GetVisionTargetInfo().nedFrame_dvec[1], 2)) < 0.1){
-			temp_visionGuidanceFinalRef.p_z_r = 1;
+			temp_visionGuidanceFinalRef.p_z_r = 10;
 			printf("[CTL] Landing start\n");
 		}
 		printf("[visionGuidance] CameraRelNED: %.2f %.2f\n", _cam.GetVisionTargetInfo().nedFrame_dvec[0], _cam.GetVisionTargetInfo().nedFrame_dvec[1]);
 	}
 
+	if (_cam.GetVisionTargetInfo().flags[0] && fabs(_cam.GetVisionTargetInfo().nedFrame_dvec[2]) < 5){
+		temp_visionGuidanceFinalRef.v_z_r = 0.3;
+	}
 	ReflexxesPathPlanning(_state.GetState(), temp_visionGuidanceFinalRef, outerRefPos, outerRefVel, outerRefAcc);
 
-	if(count%50 == 0){
-		printf("[visionGuidance] time %.2f B5_pnr: %.2f %.2f %.2f %.2f;\n", tElapse, outerRefPos[0], outerRefPos[1], outerRefPos[2], outerRefPos[3]);
+	if(count%100 == 0){
+		printf("[visionGuidance] time %.2f B5_pnr: %.2f %.2f %.2f %.2f; B5_vnr: %.2f %.2f %.2f\n", tElapse, outerRefPos[0], outerRefPos[1], outerRefPos[2], outerRefPos[3], outerRefVel[0], outerRefVel[1], outerRefVel[2]);
 	}
 	// finish the vision guidance phase;
 	double local_cutEnginHeight = 0;
 	if (_cmm.GetViconFlag()) local_cutEnginHeight = LANDING_CUTENGINE_HEIGHT_VICON;
 	else local_cutEnginHeight = LANDING_CUTENGINE_HEIGHT_OUTDOOR;
 
-	if ( _state.GetState().z > local_cutEnginHeight){
+	if ( outerRefPos[2] > 9.5 ){
 		//UAV is in the target area, can drop the payload, then finish the vision guidance phase;
 		_im9.SetDropSAFMC2014Target();
 		_ctl.SetSAFMCTargetDropped();
@@ -7219,7 +7229,7 @@ void clsCTL::ConstructTransition2PathRef(double outerRefPos[4], double outerRefV
 			}
 			ReflexxesPathPlanning(_state.GetState(), temp_TransitionFinalRef, outerRefPos, outerRefVel, outerRefAcc);
 
-			if(m_nCount%50 == 0){
+			if(m_nCount%100 == 0){
 				printf("[ctl:Transition-2] totalPathTime %.2f; t: %.2f; pnr: %.2f %.2f %.2f %.2f; vnr: %.2f %.2f %.2f\n", pathTotalTime, tElapse, outerRefPos[0], outerRefPos[1], outerRefPos[2], outerRefPos[3], outerRefVel[0], outerRefVel[1], outerRefVel[2]);
 			}
 			if (tElapse > pathTotalTime){
@@ -7257,8 +7267,9 @@ void clsCTL::ConstructLandingPath(UAVSTATE state, double pnr[4], double vnr[3], 
 		memset(&temp_LandingFinalRef, 0, sizeof(QROTOR_REF));
 		temp_LandingFinalRef.p_x_r = B5_pnr[0];
 		temp_LandingFinalRef.p_y_r = B5_pnr[1];
-		temp_LandingFinalRef.p_z_r = 1;
+		temp_LandingFinalRef.p_z_r = 10;
 		temp_LandingFinalRef.psi_r = B5_pnr[3];
+		temp_LandingFinalRef.v_z_r = 0.3;
 
 		static double pathTotalTime;
 
@@ -7279,12 +7290,12 @@ void clsCTL::ConstructLandingPath(UAVSTATE state, double pnr[4], double vnr[3], 
 		if (_cmm.GetViconFlag()) local_cutEnginHeight = LANDING_CUTENGINE_HEIGHT_VICON;
 				else local_cutEnginHeight = LANDING_CUTENGINE_HEIGHT_OUTDOOR;
 
-		if(count%50 == 0){
+		if(count%100 == 0){
 				//printf("[ctl:landing] local_cutEnginHeight: %.2f\n", local_cutEnginHeight);
 				printf("[ctl:Landing] tElapse %.2f; totalPathTime %.2f; pnr: %.2f %.2f %.2f %.2f; vnr: %.2f %.2f %.2f\n", tElapse, pathTotalTime, pnr[0], pnr[1], pnr[2], pnr[3], vnr[0], vnr[1], vnr[2]);
 		}
 
-		if ( state.z > local_cutEnginHeight){
+		if ( pnr[2] > temp_LandingFinalRef.p_z_r - 0.5){
 				B5_t2 = -1;
 				m_bSAFMCPathTotalTimeGetted = false;
 				m_behavior.behavior = BEHAVIOR_ENGINEDOWN;
