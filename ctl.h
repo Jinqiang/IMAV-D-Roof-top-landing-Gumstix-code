@@ -11,6 +11,8 @@
 #include <RMLPositionInputParameters.h>
 #include <RMLPositionOutputParameters.h>
 
+extern EQUILIBRIUM _equ_Hover;
+
 #ifndef BOOL
 #define BOOL	int
 #define TRUE	1
@@ -330,7 +332,7 @@ public:
 	bool GetSAFMCTargetDropped() {return m_bSAFMCtargetDropped;}
 
 	void SetIntegratorFlag() { m_bIntegrator = TRUE; }
-	void ResetIntegratorFlag() { m_bIntegrator = FALSE; }
+	void ResetIntegratorFlag() { m_bIntegrator = FALSE; A2_equ.et = _equ_Hover.et;}
 	BOOL GetIntegratorFlag() const { return m_bIntegrator; }
 
 	BOOL GetTakeOffFlag() { return m_bTakeOffFlag;}

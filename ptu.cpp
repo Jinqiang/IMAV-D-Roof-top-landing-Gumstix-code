@@ -18,8 +18,8 @@
 extern clsState _state;
 extern clsIM8 _im8;
 
-#define PAN_TRIM 3200
-#define TILT_TRIM 2600
+#define PAN_TRIM 3100
+#define TILT_TRIM 2800
 #define SVO_ANGLE_PAN_SCALING (18.1594) //angle in degrees
 #define SVO_ANGLE_TILT_SCALING (-18.1594)
 

@@ -2261,9 +2261,10 @@ void clsState::Update1(double tPack, IM8PACK *pPack)		/* IG500N */
 			KalmanTimeUpdateZAxis(m_state1, m_KalmanState);
 			KalmanMeasurementUpdateZAxis(m_state1, m_KalmanState);
 
-/*			if (m_nCount % 50 == 0) {
-				printf("[IM8 baro filter]: z %.3f, wg %.3f\n", m_state1.z, m_state1.wg);
-			}*/
+			if (m_nCount % 50 == 0) {
+				//printf("[IM8 baro filter]: x: %.2f y: %.2f z %.3f, wg %.3f\n", m_state1.x, m_state1.y, m_state1.z, m_state1.wg);
+				//printf("[IM8 GPS] lat %f lon %f\n", m_state1.latitude*180/PI, m_state1.longitude*180/PI);
+			}
 		}
 		m_tState1 = tPack;
 		break;

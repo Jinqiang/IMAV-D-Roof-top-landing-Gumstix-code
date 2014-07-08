@@ -2797,7 +2797,7 @@ void clsCTL::AutoPathGeneration()
 			}
 			else if (m_pPlan->GetPlanID() == 4){ //2014 SAFMC plan
 				if (_ctl.GetTakeOffFlag()){
-				    ConstructTakeOffPath(state, -10, B5_pnr, B5_vnr, B5_anr);
+				    ConstructTakeOffPath(state, -5, B5_pnr, B5_vnr, B5_anr);
 				}
 				else if (_ctl.GetTransition1Flag()) {
 					_ctl.ConstructTransition1PathRef(B5_pnr, B5_vnr, B5_anr);
@@ -3934,7 +3934,7 @@ if (m_bAutoPath) {
 	}
 	B5_t4 = t;
 
-	if (false /*GetIntegratorFlag()*/) {
+	if (GetIntegratorFlag()) {
 		double xerr = state.x - B5_pnr[0];
 		m_xerrint += xerr*dt;
 		m_xerrint = range(m_xerrint, XERRINT_MIN, XERRINT_MAX);
@@ -4023,6 +4023,9 @@ void clsCTL::Innerloop_QuadLion()
 //		A2_equ.er = temp1*A2_equ.er + temp2*(m_sig.rudder+pre_rud);
 //		A2_equ.et = 0.9683*A2_equ.et + 0.0159*(m_sig.throttle+pre_thr);
 		A2_equ.et = 0.99*A2_equ.et + 0.005*(m_sig.throttle+pre_thr);
+	}
+	else{
+		A2_equ.et = _equ_Hover.et;
 	}
 
 	pre_ail = m_sig.aileron;
@@ -6234,7 +6237,7 @@ void clsCTL::Init()
 
 	    IP->MaxVelocityVector->VecData			[0]	=	 2		;
 	    IP->MaxVelocityVector->VecData			[1]	=	 2		;
-	    IP->MaxVelocityVector->VecData			[2]	=	 0.2		;
+	    IP->MaxVelocityVector->VecData			[2]	=	 0.4		;
 	    IP->MaxVelocityVector->VecData          [3] =    0.2;
 
 	    IP->MaxAccelerationVector->VecData		[0]	=	 0.5		;
@@ -6521,12 +6524,12 @@ int cls2014SAFMCPlan::Run(){
 //				m_behavior.behavior = BEHAVIOR_PATHA;
 
 				//Fly to target point;
-				_state.ClearEvent();
-				m_mode = TRANSITION_1;
-				_ctl.ResetTakeOffFlag();
-				_ctl.SetIntegratorFlag();
-				_ctl.SetTransition1Flag();
-				m_behavior.behavior = BEHAVIOR_PATHA;
+//				_state.ClearEvent();
+//				m_mode = TRANSITION_1;
+//				_ctl.ResetTakeOffFlag();
+//				_ctl.SetIntegratorFlag();
+//				_ctl.SetTransition1Flag();
+//				m_behavior.behavior = BEHAVIOR_PATHA;
 
 ////				 Taking-off, hold 5s, then landing;
 //				_state.ClearEvent();
@@ -6537,11 +6540,11 @@ int cls2014SAFMCPlan::Run(){
 //				m_behavior.behavior = BEHAVIOR_PATHA;
 
 				// For vision guidance test;
-//				_state.ClearEvent();
-//				m_mode = VISION_INITIALIZATION;
-//				_ctl.ResetTakeOffFlag();
-//				_ctl.SetVisionInitializationFlag();
-//				m_behavior.behavior = BEHAVIOR_PATHA;
+				_state.ClearEvent();
+				m_mode = VISION_INITIALIZATION;
+				_ctl.ResetTakeOffFlag();
+				_ctl.SetVisionInitializationFlag();
+				m_behavior.behavior = BEHAVIOR_PATHA;
 			}
 			break;
 
