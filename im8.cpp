@@ -49,7 +49,6 @@ BOOL clsIM8::InitThread()
 	m_timeOut.tv_usec = IMU_TIMEOUT_READ;
 
     m_nsIM8= ::open("/dev/ser3", O_RDWR /*| O_NONBLOCK*/ );
-//	m_nsIM8= ::open("/dev/ser0", O_RDWR /*| O_NONBLOCK*/ );
 	if (m_nsIM8 == -1) {
 			printf("[IM8] Open IMU serial port (/dev/ser3) failed!\n");
 			return FALSE;

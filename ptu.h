@@ -17,7 +17,9 @@ public:
 protected:
 	int m_nsPTU;
 	double m_panAngle, m_tiltAngle;
+	double m_PTU2_panAngle, m_PTU2_tiltAngle;
 	double m_panAngleOffset, m_tiltAngleOffset;
+	double m_PTU2_panAngleOffset, m_PTU2_tiltAngleOffset;
 
 public:
 	virtual BOOL InitThread();

@@ -149,7 +149,7 @@ void clsCAM::Input()
 
 				double camera_body[3] = {0};
 				B2G(abc, r_t_c, camera_body);
-				camera_body[0] += 0.12;
+				camera_body[0] -= 0.13;
 				camera_body[1] += 0;
 				camera_body[2] -= 0.2;
 

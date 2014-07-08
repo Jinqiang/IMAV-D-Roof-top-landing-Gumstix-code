@@ -124,7 +124,8 @@ int clsIM9::EveryRun()
 	mavlink_msg_set_quad_swarm_roll_pitch_yaw_thrust_encode(0, 200, &message, &sp);
 	unsigned len = mavlink_msg_to_send_buffer((uint8_t*)buf, &message);
 
-	write(m_nsIM9, buf, len);
+	int nWriteBytes = write(m_nsIM9, buf, len);
+	//printf("[im9] writeBytes: %d\n", nWriteBytes);
 
 	double tPack = ::GetTime();
 	PX4Update(m_im90);
@@ -149,10 +150,10 @@ int clsIM9::EveryRun()
     UAVSTATE &state = _state.GetState();
     if (m_nCount%50 == 0)
 	{
-//		cout<<"Attitude:\t"<<state.a<<" \t"<<state.b<<" \t"<<state.c<<endl;
-//		cout<<"Acceleration:\t"<<state.acx<<" \t"<<state.acy<<" \t"<<state.acz<<endl;
-//		cout<<"Position:\t"<<state.x<<" \t"<<state.y<<" \t"<<state.z<<endl;
-//		cout<<"Control:\t"<<sig.aileron<<" \t"<<sig.elevator<<" \t"<<sig.throttle<<" \t"<<sig.rudder<<endl<<endl;
+	//	cout<<"Attitude:\t"<<state.a<<" \t"<<state.b<<" \t"<<state.c<<endl;
+	//	cout<<"Acceleration:\t"<<state.acx<<" \t"<<state.acy<<" \t"<<state.acz<<endl;
+	//	cout<<"Position:\t"<<state.x<<" \t"<<state.y<<" \t"<<state.z<<endl;
+	//	cout<<"Control:\t"<<sig.aileron<<" \t"<<sig.elevator<<" \t"<<sig.throttle<<" \t"<<sig.rudder<<endl<<endl;
 	}
 
 	return TRUE;
@@ -166,7 +167,7 @@ void clsIM9::PX4Update(IM9PACK& pack)
 	uint8_t cp[2014];
 	int count = read(m_nsIM9, cp, 2014);
 
-//	printf("[IM9] Read %d bytes\n", count);
+	//printf("[IM9] Read %d bytes\n", count);
 	for (int i=0; i<count; i++)
 	{
 		mavlink_message_t message;
@@ -244,11 +245,11 @@ void clsIM9::PX4Update(IM9PACK& pack)
 					mavlink_msg_attitude_decode(&message, &attitude);
 
 					if (scaled_att_receive_counter%10 == 0) {
-//						printf("Got message ATTITUDE \n");
-//						printf("\t time: %llu\n", attitude.time_boot_ms);
-//						printf("\t attitude:\t% f\t% f\t% f (rad)\n", attitude.roll, attitude.pitch, attitude.yaw);
-//						printf("\t att speed:\t% f\t% f\t% f (rad/s)\n", attitude.rollspeed, attitude.pitchspeed, attitude.yawspeed);
-//						printf("\n");
+						//printf("Got message ATTITUDE \n");
+						//printf("\t time: %llu\n", attitude.time_boot_ms);
+						//printf("\t attitude:\t% f\t% f\t% f (rad)\n", attitude.roll, attitude.pitch, attitude.yaw);
+						//printf("\t att speed:\t% f\t% f\t% f (rad/s)\n", attitude.rollspeed, attitude.pitchspeed, attitude.yawspeed);
+						//printf("\n");
 					}
 
 					// Update pack

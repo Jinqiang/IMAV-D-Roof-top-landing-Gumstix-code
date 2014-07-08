@@ -59,8 +59,8 @@ BOOL clsDLG::InitThread()
 		if (m_pfLogb == NULL) return FALSE;
 	}
 
-	m_pfLoga = fopen(m_szFilea, "wb");
-	if (m_pfLoga == NULL) return FALSE;
+	//m_pfLoga = fopen(m_szFilea, "wb");
+	//if (m_pfLoga == NULL) return FALSE;
 
 	//write into file header
 	char header[] = { 0x55, 0x55, 0x56, 0x07 };
@@ -212,7 +212,7 @@ int clsDLG::EveryRun()
 	//begin writing data
 	if (m_bBlackBox) m_pfLogb = ::fopen(m_szFileb, "a");
 
-	m_pfLoga = ::fopen(m_szFilea, "a");
+	//m_pfLoga = ::fopen(m_szFilea, "a");
 
 	int i; //char strData[512];
 //	for (i=0; i<=50; i++)
