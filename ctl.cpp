@@ -7152,10 +7152,10 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 	count++;
 	if (count > 1e6) count = 0;
 
-	if (_cam.GetVisionTargetInfo().flags[0] && count%100 == 0){
+	if (_cam.GetVisionTargetInfo().flags[0] && count%50 == 0){
 		temp_visionGuidanceFinalRef.p_x_r = _cam.GetVisionTargetInfo().nedFrame_dvec[0] + outerRefPos[0];
 		temp_visionGuidanceFinalRef.p_y_r = _cam.GetVisionTargetInfo().nedFrame_dvec[1] + outerRefPos[1];
-		if (sqrt(pow(_cam.GetVisionTargetInfo().nedFrame_dvec[0], 2) + pow(_cam.GetVisionTargetInfo().nedFrame_dvec[1], 2)) < 0.1){
+		if (sqrt(pow(_cam.GetVisionTargetInfo().nedFrame_dvec[0], 2) + pow(_cam.GetVisionTargetInfo().nedFrame_dvec[1], 2)) < 0.15){
 			temp_visionGuidanceFinalRef.p_z_r = 10;
 			printf("[CTL] Landing start\n");
 		}
