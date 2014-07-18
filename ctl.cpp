@@ -6237,7 +6237,7 @@ void clsCTL::Init()
 
 	    IP->MaxVelocityVector->VecData			[0]	=	 2		;
 	    IP->MaxVelocityVector->VecData			[1]	=	 2		;
-	    IP->MaxVelocityVector->VecData			[2]	=	 0.4		;
+	    IP->MaxVelocityVector->VecData			[2]	=	 0.2		;
 	    IP->MaxVelocityVector->VecData          [3] =    0.2;
 
 	    IP->MaxAccelerationVector->VecData		[0]	=	 0.5		;
@@ -6585,6 +6585,7 @@ int cls2014SAFMCPlan::Run(){
 				if (_ctl.GetSAFMCTargetDropped()){
 					_state.ClearEvent();
 					m_mode = TRANSITION_2;
+					_ctl.SetIntegratorFlag();
 					_ctl.ResetVisionInitializationFlag();
 					_ctl.SetTransition2Flag();
 					m_behavior.behavior = BEHAVIOR_PATHA;
@@ -6598,6 +6599,7 @@ int cls2014SAFMCPlan::Run(){
 				else{
 					_state.ClearEvent();
 					m_mode = VISION_GUIDANCE;
+					_ctl.SetIntegratorFlag();
 					_ctl.ResetVisionInitializationFlag();
 					_ctl.SetVisionGuidanceFlag();
 					m_behavior.behavior = BEHAVIOR_PATHA;
@@ -7152,19 +7154,17 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 	count++;
 	if (count > 1e6) count = 0;
 
-	if (_cam.GetVisionTargetInfo().flags[0] && count%50 == 0){
+	if (_cam.GetVisionTargetInfo().flags[0] && count%25 == 0){
 		temp_visionGuidanceFinalRef.p_x_r = _cam.GetVisionTargetInfo().nedFrame_dvec[0] + outerRefPos[0];
 		temp_visionGuidanceFinalRef.p_y_r = _cam.GetVisionTargetInfo().nedFrame_dvec[1] + outerRefPos[1];
 		if (sqrt(pow(_cam.GetVisionTargetInfo().nedFrame_dvec[0], 2) + pow(_cam.GetVisionTargetInfo().nedFrame_dvec[1], 2)) < 0.15){
-			temp_visionGuidanceFinalRef.p_z_r = 10;
+			temp_visionGuidanceFinalRef.p_z_r = 3;
+//			temp_visionGuidanceFinalRef.v_z_r = 0.15;
 			printf("[CTL] Landing start\n");
 		}
 		printf("[visionGuidance] CameraRelNED: %.2f %.2f\n", _cam.GetVisionTargetInfo().nedFrame_dvec[0], _cam.GetVisionTargetInfo().nedFrame_dvec[1]);
 	}
 
-	if (_cam.GetVisionTargetInfo().flags[0] && fabs(_cam.GetVisionTargetInfo().nedFrame_dvec[2]) < 5){
-		temp_visionGuidanceFinalRef.v_z_r = 0.3;
-	}
 	ReflexxesPathPlanning(_state.GetState(), temp_visionGuidanceFinalRef, outerRefPos, outerRefVel, outerRefAcc);
 
 	if(count%100 == 0){
@@ -7175,7 +7175,7 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 	if (_cmm.GetViconFlag()) local_cutEnginHeight = LANDING_CUTENGINE_HEIGHT_VICON;
 	else local_cutEnginHeight = LANDING_CUTENGINE_HEIGHT_OUTDOOR;
 
-	if ( outerRefPos[2] > 9.5 ){
+	if ( outerRefPos[2] > 2.5 ){
 		//UAV is in the target area, can drop the payload, then finish the vision guidance phase;
 		_im9.SetDropSAFMC2014Target();
 		_ctl.SetSAFMCTargetDropped();

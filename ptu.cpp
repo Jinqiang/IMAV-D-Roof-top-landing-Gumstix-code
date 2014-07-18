@@ -85,7 +85,7 @@ int clsPTU::EveryRun()
 		int nPan = int(PAN_TRIM + SVO_ANGLE_PAN_SCALING*m_panAngle*180/PI);
 		int nTilt = int(TILT_TRIM + SVO_ANGLE_TILT_SCALING*m_tiltAngle*180/PI);
 
-		m_PTU2_panAngle = 20*PI/180.0; m_PTU2_tiltAngle = 20*PI/180.0;
+//		m_PTU2_panAngle = 20*PI/180.0; m_PTU2_tiltAngle = 20*PI/180.0;
 		int nPTU2_Pan = int(PTU2_PAN_TRIM - SVO_ANGLE_PAN_SCALING*m_PTU2_panAngle*180/PI);
 		int nPTU2_Tilt = int(PTU2_TILT_TRIM - SVO_ANGLE_TILT_SCALING*m_PTU2_tiltAngle*180/PI);
 

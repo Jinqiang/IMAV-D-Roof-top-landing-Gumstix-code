@@ -448,8 +448,22 @@ int clsCAM::EveryRun()
 
 	DATASTRUCT_GUMSTIX2VISION temp_dataGumstix2Vision;
 	memset(&temp_dataGumstix2Vision, 0, sizeof(DATASTRUCT_GUMSTIX2VISION));
-	temp_dataGumstix2Vision.x = 1;
-	temp_dataGumstix2Vision.a = 3;
+//	temp_dataGumstix2Vision.x = state.x;
+//	temp_dataGumstix2Vision.y = state.y;
+//	temp_dataGumstix2Vision.z = state.z;
+//
+//	temp_dataGumstix2Vision.ug = state.ug;
+//	temp_dataGumstix2Vision.vg = state.vg;
+//	temp_dataGumstix2Vision.wg = state.wg;
+//
+//	temp_dataGumstix2Vision.acx = state.acx;
+//	temp_dataGumstix2Vision.acy = state.acy;
+//	temp_dataGumstix2Vision.acz = state.acz;
+//
+//	temp_dataGumstix2Vision.a = state.a;
+//	temp_dataGumstix2Vision.b = state.b;
+//	temp_dataGumstix2Vision.c = state.c;
+
 
 	TELEGRAPH tele;
 
