@@ -70,6 +70,10 @@ protected:
 	double 		m_tState[MAX_STATE];
 	UAVSTATE 	m_state[MAX_STATE];
 
+	int			m_nVisionState;
+	double		m_tVisionState[MAX_STATE];
+//	VISIONSTATE	m_visionState[MAX_STATE];
+
 	int			m_nDAQ;
 	double		m_tDAQ[MAX_DAQ];
 	DAQRAWDATA	m_daqRaw[MAX_DAQ];
@@ -78,9 +82,9 @@ protected:
 	int			m_nURG;
 	double 		m_tURG[MAX_IM9PACK];
 	long		laser_ranges[MAX_IM9PACK][MAX_URG_PT];
-	double		laser_x[MAX_IM9PACK];
-	double		laser_y[MAX_IM9PACK];
-	double		laser_z[MAX_IM9PACK];
+	double		laser_height[MAX_IM9PACK];
+	double		laser_front[MAX_IM9PACK];
+	double		laser_left[MAX_IM9PACK];
 	double 		laser_phi[MAX_IM9PACK];
 	double 		laser_tht[MAX_IM9PACK];
 	double 		laser_psi[MAX_IM9PACK];

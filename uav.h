@@ -533,14 +533,18 @@ struct EQUILIBRIUM {
 };
 
 struct DATASTRUCT_GUMSTIX2VISION{
+	double gumstixTime;
 	double x, y, z;				//position or (longitude, latitude, altitude)
 	double ug,vg,wg;				//velocity
 	double acx, acy, acz;		// acceleration in x,y,z
 	double a, b, c;				//attitude
+	double u, v, w;
+	double latitude, longitude;
 };
 
 struct DATASTRUCT_VISION2GUMSTIX{
 	int flags[10];
+	double masterMind_time;
 	double cameraFrame_dvec[3]; // in camera frame
 	double nedFrame_dvec[3];
 };

@@ -21,7 +21,7 @@ extern clsIM8 _im8;
 #define PAN_TRIM 3000
 #define TILT_TRIM 3400
 
-#define PTU2_PAN_TRIM 2800
+#define PTU2_PAN_TRIM 2400
 #define PTU2_TILT_TRIM 3400
 
 #define SVO_ANGLE_PAN_SCALING (18.1594) //angle in degrees

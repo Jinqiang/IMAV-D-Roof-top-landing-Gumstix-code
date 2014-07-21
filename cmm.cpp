@@ -893,8 +893,8 @@ void clsCMM::CollectViconData(VICON_DATA viconData)
 {
 	m_viconData.x = viconData.x/1000.0; m_viconData.y = viconData.y/1000.0; m_viconData.z = viconData.z/1000.0;
 	m_viconData.a = viconData.a; m_viconData.b = viconData.b; m_viconData.c = viconData.c;
-//	printf("Vicon data: x %.3f, y %.3f, z %.3f, a %.3f, b %.3f, c %.3f \n",
-//			m_viconData.x, m_viconData.y, m_viconData.z, m_viconData.a, m_viconData.b, m_viconData.c);
+	//printf("Vicon data: x %.3f, y %.3f, z %.3f, a %.3f, b %.3f, c %.3f \n",
+	//		m_viconData.x, m_viconData.y, m_viconData.z, m_viconData.a, m_viconData.b, m_viconData.c);
 }
 
 void clsCMM::SetCmmConfig(char *devPort, short size, short flag, int baudrate)

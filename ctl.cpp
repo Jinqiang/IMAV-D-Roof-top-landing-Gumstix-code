@@ -2797,7 +2797,7 @@ void clsCTL::AutoPathGeneration()
 			}
 			else if (m_pPlan->GetPlanID() == 4){ //2014 SAFMC plan
 				if (_ctl.GetTakeOffFlag()){
-				    ConstructTakeOffPath(state, -5, B5_pnr, B5_vnr, B5_anr);
+				    ConstructTakeOffPath(state, -1.3, B5_pnr, B5_vnr, B5_anr);
 				}
 				else if (_ctl.GetTransition1Flag()) {
 					_ctl.ConstructTransition1PathRef(B5_pnr, B5_vnr, B5_anr);
@@ -6237,7 +6237,7 @@ void clsCTL::Init()
 
 	    IP->MaxVelocityVector->VecData			[0]	=	 2		;
 	    IP->MaxVelocityVector->VecData			[1]	=	 2		;
-	    IP->MaxVelocityVector->VecData			[2]	=	 0.2		;
+	    IP->MaxVelocityVector->VecData			[2]	=	 0.4		;
 	    IP->MaxVelocityVector->VecData          [3] =    0.2;
 
 	    IP->MaxAccelerationVector->VecData		[0]	=	 0.5		;

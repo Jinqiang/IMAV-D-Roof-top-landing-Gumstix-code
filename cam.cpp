@@ -135,13 +135,13 @@ void clsCAM::Input()
 		if (ReadCommand(&cmd)) {
 			switch (cmd.code){
 			case DATA_VISION2GUMSTIX:{
-				tStart = ::GetTime();
-				for(int i = 0 ; i < 10; i++) m_dataFromVision.flags[i] = GETWORD(cmd.parameter + 4*i);
-				for(int i = 0; i< 3; i++) m_dataFromVision.cameraFrame_dvec[i] = GETDOUBLE(cmd.parameter + 40 + i*8);
-				for(int i = 0; i< 3; i++) m_dataFromVision.nedFrame_dvec[i] = GETDOUBLE(cmd.parameter + 64 + i*8);
-				//memcpy(&m_dataFromVision, cmd.parameter, sizeof(DATASTRUCT_VISION2GUMSTIX));
+				memcpy(&m_dataFromVision, cmd.parameter, sizeof(DATASTRUCT_VISION2GUMSTIX));
 
-				//printf("[Cam Target Camera Frame] %d %d %.2f %.2f %.2f\n", m_dataFromVision.flags[0],m_dataFromVision.flags[9], m_dataFromVision.cameraFrame_dvec[0], m_dataFromVision.cameraFrame_dvec[1], m_dataFromVision.cameraFrame_dvec[2]);
+//				for (int i = 0; i< 10; i++) printf("%d ", m_dataFromVision.flags[i]);
+//				printf("%.2f ", m_dataFromVision.masterMind_time);
+//				for(int i = 0; i< 3; i++) printf("%.2f ", m_dataFromVision.cameraFrame_dvec[i]);
+//				for(int i = 0; i< 3; i++) printf("%.2f ", m_dataFromVision.nedFrame_dvec[i]);
+//				printf("\n");
 
 				////			for gimble case;
 				double abc[3] = {(-1.0)*_state.GetState().a, (-1.0)*_state.GetState().b, 0};
@@ -264,7 +264,6 @@ BOOL clsCAM::ReadCommand(COMMAND *pCmd)
 
 			pNextTelegraph = pChar + nPackageSize + 2;
 
-//			break;
 			pChar=pNextTelegraph;
 		}
 	}
@@ -448,32 +447,23 @@ int clsCAM::EveryRun()
 
 	DATASTRUCT_GUMSTIX2VISION temp_dataGumstix2Vision;
 	memset(&temp_dataGumstix2Vision, 0, sizeof(DATASTRUCT_GUMSTIX2VISION));
-//	temp_dataGumstix2Vision.x = state.x;
-//	temp_dataGumstix2Vision.y = state.y;
-//	temp_dataGumstix2Vision.z = state.z;
-//
-//	temp_dataGumstix2Vision.ug = state.ug;
-//	temp_dataGumstix2Vision.vg = state.vg;
-//	temp_dataGumstix2Vision.wg = state.wg;
-//
-//	temp_dataGumstix2Vision.acx = state.acx;
-//	temp_dataGumstix2Vision.acy = state.acy;
-//	temp_dataGumstix2Vision.acz = state.acz;
-//
-//	temp_dataGumstix2Vision.a = state.a;
-//	temp_dataGumstix2Vision.b = state.b;
-//	temp_dataGumstix2Vision.c = state.c;
 
+	temp_dataGumstix2Vision.gumstixTime = ::GetTime();
+	temp_dataGumstix2Vision.x = state.x; temp_dataGumstix2Vision.y = state.y; temp_dataGumstix2Vision.z = state.z;
+	temp_dataGumstix2Vision.ug = state.ug; temp_dataGumstix2Vision.vg = state.vg; temp_dataGumstix2Vision.wg = state.wg;
+	temp_dataGumstix2Vision.acx = state.acx; temp_dataGumstix2Vision.acy = state.acy; temp_dataGumstix2Vision.acz = state.acz;
+	temp_dataGumstix2Vision.a = state.a; temp_dataGumstix2Vision.b = state.b; temp_dataGumstix2Vision.c = state.c;
+	temp_dataGumstix2Vision.u = state.u; temp_dataGumstix2Vision.v = state.v; temp_dataGumstix2Vision.w = state.w;
+	temp_dataGumstix2Vision.latitude = state.latitude*180.0/PI; temp_dataGumstix2Vision.longitude = state.longitude*180.0/PI;
 
 	TELEGRAPH tele;
 
 	//write the pose of the UAV
-	if ( m_nCount% 2  )  {
+	if ( m_nCount% 2 == 0  )  {
 		MakeTelegraph(&tele, DATA_GUMSTIX2VISION, t, &temp_dataGumstix2Vision, sizeof(DATASTRUCT_GUMSTIX2VISION));
 		int nWrite=write(m_nsCAM, tele.content, tele.size);
 		//printf("[CAM] Sent %d bytes to vision cpu\n", nWrite);
 	}
-
 	return TRUE;
 }
 

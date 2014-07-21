@@ -27,6 +27,7 @@ BOOL clsDLG::InitThread()
 	m_nURG = 0;
 
 	m_nState = 0;
+	m_nVisionState = 0;
 	m_nDAQ = 0;
 
 	m_nCTL = 0;
@@ -38,7 +39,7 @@ BOOL clsDLG::InitThread()
 
 	m_pfLoga = m_pfLog = m_pfLogb = NULL;
 
-	m_bBlackBox = FALSE;//TRUE;				//default
+	m_bBlackBox = TRUE;
 //	if (_HELICOPTER == 6) m_bBlackBox = FALSE;				//close black back for the SheLion, to decrease cpu occupancy
 
 	char szTime[256];
@@ -59,8 +60,8 @@ BOOL clsDLG::InitThread()
 		if (m_pfLogb == NULL) return FALSE;
 	}
 
-	//m_pfLoga = fopen(m_szFilea, "wb");
-	//if (m_pfLoga == NULL) return FALSE;
+//	m_pfLoga = fopen(m_szFilea, "wb");
+//	if (m_pfLoga == NULL) return FALSE;
 
 	//write into file header
 	char header[] = { 0x55, 0x55, 0x56, 0x07 };
@@ -130,6 +131,15 @@ int clsDLG::EveryRun()
 		pthread_mutex_unlock(&_state.m_mtxState);
 	}
 
+	if (_state.m_nVisionState != 0) {
+//		pthread_mutex_lock(&_state.m_mtxVisionState);
+//		m_nVisionState = _state.m_nVisionState;
+//		::memcpy(m_tVisionState, _state.m_tVisionState, sizeof(double) * m_nVisionState);
+//		::memcpy(m_visionState, _state.m_visionState, sizeof(VISIONSTATE) * m_nVisionState);
+//		_state.m_nVisionState = 0;
+//		pthread_mutex_unlock(&_state.m_mtxVisionState);
+	}
+
 	if (_daq.m_nDAQ != 0) {
 //		cout<<"m_nDAQ "<<m_nDAQ<<endl;
 		pthread_mutex_lock(&_daq.m_mtxDAQ);
@@ -142,7 +152,7 @@ int clsDLG::EveryRun()
 	}
 
 	if (_ctl.m_nCTL != 0) {
-	//	cout<<"m_nCTL "<<_ctl.m_nCTL<<endl;
+//		cout<<"m_nCTL "<<m_nCTL<<endl;
 		pthread_mutex_lock(&_ctl.m_mtxCTL);
 		m_nCTL = _ctl.m_nCTL;
 		::memcpy(m_tCTL, _ctl.m_tCTL, m_nCTL*sizeof(double));
@@ -186,12 +196,12 @@ int clsDLG::EveryRun()
 		m_nURG = _urg.m_nURG;
 		::memcpy(m_tURG, _urg.m_tURG, m_nURG*sizeof(double));
 		::memcpy(laser_ranges, _urg.ranges, MAX_URG_PT*m_nURG*sizeof(long));
-		::memcpy(laser_x, _urg.x_log, m_nURG*sizeof(double));
-		::memcpy(laser_y, _urg.y_log, m_nURG*sizeof(double));
-		::memcpy(laser_z, _urg.z_log, m_nURG*sizeof(double));
-		::memcpy(laser_phi, _urg.phi_log, m_nURG*sizeof(double));
-		::memcpy(laser_tht, _urg.tht_log, m_nURG*sizeof(double));
-		::memcpy(laser_psi, _urg.psi_log, m_nURG*sizeof(double));
+//		::memcpy(laser_height, _urg.heights, m_nURG*sizeof(double));
+//		::memcpy(laser_front, _urg.fronts, m_nURG*sizeof(double));
+//		::memcpy(laser_left, _urg.lefts, m_nURG*sizeof(double));
+//		::memcpy(laser_phi, _urg.phi, m_nURG*sizeof(double));
+//		::memcpy(laser_tht, _urg.tht, m_nURG*sizeof(double));
+//		::memcpy(laser_psi, _urg.psi, m_nURG*sizeof(double));
 		_urg.m_nURG = 0;
 		pthread_mutex_unlock(&_urg.m_mtxURG);
 	}
@@ -212,7 +222,7 @@ int clsDLG::EveryRun()
 	//begin writing data
 	if (m_bBlackBox) m_pfLogb = ::fopen(m_szFileb, "a");
 
-	//m_pfLoga = ::fopen(m_szFilea, "a");
+	m_pfLoga = ::fopen(m_szFilea, "a");
 
 	int i; //char strData[512];
 //	for (i=0; i<=50; i++)
@@ -284,6 +294,21 @@ int clsDLG::EveryRun()
 		}
 	}
 	m_nState = 0;
+
+	for (i=0; i<=m_nVisionState-1; i++) {
+//		double t = m_tVisionState[i];
+//		DLGHEADER header = {0x5555, DATA_VISIONSTATE, t};
+//
+//		if (m_pfLog != NULL) {
+//			fwrite(&header, sizeof(DLGHEADER), 1, m_pfLog);
+//			fwrite(&m_visionState[i], sizeof(VISIONSTATE), 1, m_pfLog);
+//		}
+//		if (m_pfLogb != NULL) {
+//			fwrite(&header, sizeof(DLGHEADER), 1, m_pfLogb);
+//			fwrite(&m_visionState[i], sizeof(VISIONSTATE), 1, m_pfLogb);
+//		}
+	}
+	m_nVisionState = 0;
 
 	for (i=0; i<=m_nDAQ-1; i++) {
 		DLGHEADER header = { 0x5555, DATA_DAQ, m_tDAQ[i] };
@@ -360,21 +385,21 @@ int clsDLG::EveryRun()
 	{
 		if (m_pfLoga != NULL)
 		{
-//			for (int j=0; j<MAX_URG_PT; j++)
-//			{
-//				fprintf(m_pfLoga, "%d\t", laser_ranges[i][j]);
-//			}
-			fprintf(m_pfLoga, "%.3f\t", laser_x[i]);
-			fprintf(m_pfLoga, "%.3f\t", laser_y[i]);
-			fprintf(m_pfLoga, "%.3f\t", laser_z[i]);
-			fprintf(m_pfLoga, "%.3f\t", laser_phi[i]);
-			fprintf(m_pfLoga, "%.3f\t", laser_tht[i]);
-			fprintf(m_pfLoga, "%.3f\t", laser_psi[i]);
-			fprintf(m_pfLoga, "%.3f\n", m_tURG[i]);
+			for (int j=0; j<MAX_URG_PT; j++)
+			{
+				fprintf(m_pfLoga, "%d\t", laser_ranges[i][j]);
+			}
+			fprintf(m_pfLoga, "%f\t", laser_height[i]);
+			fprintf(m_pfLoga, "%f\t", laser_phi[i]);
+			fprintf(m_pfLoga, "%f\t", laser_tht[i]);
+			fprintf(m_pfLoga, "%f\t", laser_psi[i]);
+			fprintf(m_pfLoga, "%f\n", m_tURG[i]);
+//			fprintf(m_pfLoga, "%f\t", map_x[i]);
+//			fprintf(m_pfLoga, "%f\t", map_y[i]);
+//			fprintf(m_pfLoga, "%f\n", map_z[i]);
 		}
 	}
 	m_nURG = 0;
-
 
 	if (m_pfLoga) {
 		::fclose(m_pfLoga);
