@@ -2787,9 +2787,7 @@ void clsCTL::AutoPathGeneration()
 	else if ( IsPathSmooth() ) {
 		if ( m_pPlan!=NULL ) {
 			if ( m_pPlan->GetPlanID() == 2 ) {// take-off plan
-				B5_pnr[0] = B5_x0; B5_pnr[1] = B5_y0; B5_pnr[2] = B5_z0; B5_pnr[3] = B5_c0;
-				B5_vnr[0] = 0; B5_vnr[1] = 0; B5_vnr[2] = 0;
-				B5_anr[0] = 0; B5_anr[1] = 0; B5_anr[2] = 0;
+				ConstructTakeOffPath(state, -5, B5_pnr, B5_vnr, B5_anr);
 			}
 			else if ( m_pPlan->GetPlanID() == 3 ) {// landing plan
 //				_pathTmp.CreateLandingPathOnline(&state, B5_pnr, B5_vnr, B5_anr);
@@ -2797,7 +2795,7 @@ void clsCTL::AutoPathGeneration()
 			}
 			else if (m_pPlan->GetPlanID() == 4){ //2014 SAFMC plan
 				if (_ctl.GetTakeOffFlag()){
-				    ConstructTakeOffPath(state, -1.3, B5_pnr, B5_vnr, B5_anr);
+				    ConstructTakeOffPath(state, -7.5, B5_pnr, B5_vnr, B5_anr);
 				}
 				else if (_ctl.GetTransition1Flag()) {
 					_ctl.ConstructTransition1PathRef(B5_pnr, B5_vnr, B5_anr);
@@ -3987,8 +3985,8 @@ void clsCTL::Innerloop_QuadLion()
 	m_sig.throttle = A2_equ.et - B_aczr_wb*0.055;
 	m_sig.rudder   = A2_equ.er + B_cr;
 
-	m_sig.aileron  = range(m_sig.aileron,  -0.3, 0.3);
-	m_sig.elevator = range(m_sig.elevator, -0.3, 0.3);
+	m_sig.aileron  = range(m_sig.aileron,  -0.6, 0.6);
+	m_sig.elevator = range(m_sig.elevator, -0.6, 0.6);
 	m_sig.throttle = range(m_sig.throttle,  0.0, 0.8);
 	m_sig.rudder   = range(m_sig.rudder,   -0.6, 0.6);
 
@@ -6237,12 +6235,12 @@ void clsCTL::Init()
 
 	    IP->MaxVelocityVector->VecData			[0]	=	 2		;
 	    IP->MaxVelocityVector->VecData			[1]	=	 2		;
-	    IP->MaxVelocityVector->VecData			[2]	=	 0.4		;
+	    IP->MaxVelocityVector->VecData			[2]	=	 0.5		;
 	    IP->MaxVelocityVector->VecData          [3] =    0.2;
 
-	    IP->MaxAccelerationVector->VecData		[0]	=	 0.5		;
-	    IP->MaxAccelerationVector->VecData		[1]	=	 0.5		;
-	    IP->MaxAccelerationVector->VecData		[2]	=	 0.2		;
+	    IP->MaxAccelerationVector->VecData		[0]	=	 0.7		;
+	    IP->MaxAccelerationVector->VecData		[1]	=	 0.7		;
+	    IP->MaxAccelerationVector->VecData		[2]	=	 0.3		;
 	    IP->MaxAccelerationVector->VecData      [3] =    0.1        ;
 
 	    IP->MaxJerkVector->VecData				[0]	=	 1.0		;
@@ -6524,12 +6522,12 @@ int cls2014SAFMCPlan::Run(){
 //				m_behavior.behavior = BEHAVIOR_PATHA;
 
 				//Fly to target point;
-//				_state.ClearEvent();
-//				m_mode = TRANSITION_1;
-//				_ctl.ResetTakeOffFlag();
-//				_ctl.SetIntegratorFlag();
-//				_ctl.SetTransition1Flag();
-//				m_behavior.behavior = BEHAVIOR_PATHA;
+				_state.ClearEvent();
+				m_mode = TRANSITION_1;
+				_ctl.ResetTakeOffFlag();
+				_ctl.SetIntegratorFlag();
+				_ctl.SetTransition1Flag();
+				m_behavior.behavior = BEHAVIOR_PATHA;
 
 ////				 Taking-off, hold 5s, then landing;
 //				_state.ClearEvent();
@@ -6539,12 +6537,12 @@ int cls2014SAFMCPlan::Run(){
 //				_ctl.SetLandingFlag();
 //				m_behavior.behavior = BEHAVIOR_PATHA;
 
-				// For vision guidance test;
-				_state.ClearEvent();
-				m_mode = VISION_INITIALIZATION;
-				_ctl.ResetTakeOffFlag();
-				_ctl.SetVisionInitializationFlag();
-				m_behavior.behavior = BEHAVIOR_PATHA;
+//				// For vision guidance test;
+//				_state.ClearEvent();
+//				m_mode = VISION_INITIALIZATION;
+//				_ctl.ResetTakeOffFlag();
+//				_ctl.SetVisionInitializationFlag();
+//				m_behavior.behavior = BEHAVIOR_PATHA;
 			}
 			break;
 
@@ -7157,8 +7155,8 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 	if (_cam.GetVisionTargetInfo().flags[0] && count%25 == 0){
 		temp_visionGuidanceFinalRef.p_x_r = _cam.GetVisionTargetInfo().nedFrame_dvec[0] + outerRefPos[0];
 		temp_visionGuidanceFinalRef.p_y_r = _cam.GetVisionTargetInfo().nedFrame_dvec[1] + outerRefPos[1];
-		if (sqrt(pow(_cam.GetVisionTargetInfo().nedFrame_dvec[0], 2) + pow(_cam.GetVisionTargetInfo().nedFrame_dvec[1], 2)) < 0.15){
-			temp_visionGuidanceFinalRef.p_z_r = 3;
+		if (sqrt(pow(_cam.GetVisionTargetInfo().nedFrame_dvec[0], 2) + pow(_cam.GetVisionTargetInfo().nedFrame_dvec[1], 2)) < 0.5){
+			temp_visionGuidanceFinalRef.p_z_r = 2;
 //			temp_visionGuidanceFinalRef.v_z_r = 0.15;
 			printf("[CTL] Landing start\n");
 		}

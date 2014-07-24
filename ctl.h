@@ -94,12 +94,12 @@ extern EQUILIBRIUM _equ_Hover;
 #define MAX_CTL	128
 
 
-#define XERRINT_MIN		-6
-#define XERRINT_MAX		6
-#define YERRINT_MIN		-6
-#define YERRINT_MAX		6
-#define ZERRINT_MIN		-6
-#define ZERRINT_MAX		6
+#define XERRINT_MIN		-24
+#define XERRINT_MAX		24
+#define YERRINT_MIN		-24
+#define YERRINT_MAX		24
+#define ZERRINT_MIN		-24
+#define ZERRINT_MAX		24
 #define CERRINT_MIN		-0.1745		// -10 deg
 #define CERRINT_MAX		0.1745		// 10 deg
 
