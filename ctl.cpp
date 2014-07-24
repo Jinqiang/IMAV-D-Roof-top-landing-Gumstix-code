@@ -7094,12 +7094,72 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 	double tStart = _ctl.GetPathStartTime();
 	double tElapse = ::GetTime() - tStart;
 
-	//During the vision initialization phase, hover there and wait for vision initialization finish;
-	outerRefVel[0] = 0; outerRefAcc[0] = 0;
-	outerRefVel[1] = 0; outerRefAcc[1] = 0;
-	outerRefVel[2] = 0; outerRefAcc[2] = 0;
+	///calculate the searching area waypoint
+	///depends on the search radius and step size;
+	double maxCoverageRadius = 10;
+	int stepNr = 2; //2 circle
 
-	//Following procedure is the logic for vision initialization;
+	static bool searchWaypointCalculated = false;
+	static double wayPoint[100]; //0 is x , 1 is y;
+
+	if (!searchWaypointCalculated){
+		for (int i = 0; i < stepNr*4 + 1; i++){
+			switch(i%4 + 1){
+			case 1:
+				wayPoint[i*2] = (i/2 + 1)*(maxCoverageRadius/(double)stepNr);
+				wayPoint[i*2 + 1] = 0;
+				break;
+			case 2:
+				wayPoint[i*2] = 0;
+				wayPoint[i*2 + 1] = (i/2 + 1)*(maxCoverageRadius/(double)stepNr);
+				break;
+			case 3:
+				wayPoint[i*2] = (-1)*(i/2 + 1)*(maxCoverageRadius/(double)stepNr);
+				wayPoint[i*2 + 1] = 0;
+				break;
+			case 4:
+				wayPoint[i*2] = 0;
+				wayPoint[i*2 + 1] = (-1)*(i/2 + 1)*(maxCoverageRadius/(double)stepNr);
+				break;
+			default:
+				break;
+			}
+		}
+		searchWaypointCalculated = true;
+	}
+	// End of calculation;
+
+	/// Generate the path references for the search path;
+	static int passedWayPointCount = 0;
+	static bool local_QROTOR_REF_initialized = false;
+	static QROTOR_REF temp_SearchPathRef;
+
+	if (passedWayPointCount < stepNr*4 + 1){
+		if (!local_QROTOR_REF_initialized){
+			//Limit the max velocity and acceleration;
+			IP->MaxVelocityVector->VecData			[0]	=	 1;
+			IP->MaxVelocityVector->VecData			[1]	=	 1;
+			IP->MaxAccelerationVector->VecData		[0]	=	 0.5;
+			IP->MaxAccelerationVector->VecData		[1]	=	 0.5;
+
+
+			memset(&temp_SearchPathRef, 0, sizeof(QROTOR_REF));
+			temp_SearchPathRef.p_x_r = outerRefPos[0] + wayPoint[passedWayPointCount*2];
+//			temp_SearchPathRef.v_x_r = 1;
+			temp_SearchPathRef.p_y_r = outerRefPos[1] + wayPoint[passedWayPointCount*2+1];
+//			temp_SearchPathRef.v_y_r = 1;
+			temp_SearchPathRef.p_z_r = outerRefPos[2];
+			temp_SearchPathRef.psi_r = outerRefPos[3];
+			local_QROTOR_REF_initialized = true;
+		}
+		if (ReflexxesPathPlanning(_state.GetState(), temp_SearchPathRef, outerRefPos, outerRefVel, outerRefAcc) < 0.5){
+			local_QROTOR_REF_initialized = false;
+			passedWayPointCount++;
+		}
+	}
+	// End of the reference generation
+
+	///If can see target clearly during searching, GOTO->Guidance mode directly;
 	static int local_targetDetectedCount = 0;
 	if (_cam.GetVisionTargetInfo().flags[0]){ // flag[0] --> target detected (true);
 		local_targetDetectedCount++;
@@ -7107,7 +7167,6 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 	else{
 		local_targetDetectedCount = 0;
 	}
-
 	if (local_targetDetectedCount >= 20){
 		//vision has a good viewPoint, can detect the target stably;
 		//Finish the vision initialization phase, enter the vision guidance phase;
@@ -7115,20 +7174,19 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 		_state.SetEvent(EVENT_BEHAVIOREND, BEHAVIOR_PATHA);
 		printf("[visionInitialization] Good viewPoint, enter vision guidance\n");
 	}
+	// End;
 
-	if (local_targetDetectedCount < 5 && tElapse > 15){
-		// Stayed in vision initialization phase more than 30 s,
-		// vision system still does not have a good view point;
-		// Drop the target, skip the vision guidance phase, enter the transition-2 phase;
-		_im9.SetDropSAFMC2014Target();
-		_ctl.SetSAFMCTargetDropped();
-		B5_t2 = -1;
-		_state.SetEvent(EVENT_BEHAVIOREND, BEHAVIOR_PATHA);
-		printf("[VisionInitialization] Time is up, return home now\n");
+	/// If still cannot detect the target after searching path, return home immediately;
+	if (passedWayPointCount == stepNr*4 + 1){
+			/* If still cannot detect the target after
+			 * the searching path, then return home;*/
+			_im9.SetDropSAFMC2014Target();
+			_ctl.SetSAFMCTargetDropped();
+			B5_t2 = -1;
+			_state.SetEvent(EVENT_BEHAVIOREND, BEHAVIOR_PATHA);
+			printf("[VisionInitialization] Search path finish, didnt see the target, return home now\n");
 	}
-	if (m_nCount%50 == 0){
-		printf("[visionInitialization] local_targetDetectedCount: %d\n", local_targetDetectedCount);
-	}
+	// End;
 }
 
 void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerRefVel[3], double outerRefAcc[3]){
@@ -7140,6 +7198,13 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 	static bool local_QROTOR_REF_initialized = false;
 
 	if(!local_QROTOR_REF_initialized){
+		//Limit the max velocity and acceleration;
+		IP->MaxVelocityVector->VecData			[0]	=	 2;
+		IP->MaxVelocityVector->VecData			[1]	=	 2;
+		IP->MaxAccelerationVector->VecData		[0]	=	 0.7;
+		IP->MaxAccelerationVector->VecData		[1]	=	 0.7;
+
+
 		memset(&temp_visionGuidanceFinalRef, 0, sizeof(QROTOR_REF));
 		temp_visionGuidanceFinalRef.p_x_r = outerRefPos[0];
 		temp_visionGuidanceFinalRef.p_y_r = outerRefPos[1];
@@ -7157,7 +7222,6 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 		temp_visionGuidanceFinalRef.p_y_r = _cam.GetVisionTargetInfo().nedFrame_dvec[1] + outerRefPos[1];
 		if (sqrt(pow(_cam.GetVisionTargetInfo().nedFrame_dvec[0], 2) + pow(_cam.GetVisionTargetInfo().nedFrame_dvec[1], 2)) < 0.5){
 			temp_visionGuidanceFinalRef.p_z_r = 2;
-//			temp_visionGuidanceFinalRef.v_z_r = 0.15;
 			printf("[CTL] Landing start\n");
 		}
 		printf("[visionGuidance] CameraRelNED: %.2f %.2f\n", _cam.GetVisionTargetInfo().nedFrame_dvec[0], _cam.GetVisionTargetInfo().nedFrame_dvec[1]);
