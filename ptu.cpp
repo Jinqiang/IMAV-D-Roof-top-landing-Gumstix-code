@@ -18,11 +18,11 @@
 extern clsState _state;
 extern clsIM8 _im8;
 
-#define PAN_TRIM 3000
-#define TILT_TRIM 3400
+#define PAN_TRIM 3500
+#define TILT_TRIM 3300
 
 #define PTU2_PAN_TRIM 2400
-#define PTU2_TILT_TRIM 3400
+#define PTU2_TILT_TRIM 2400
 
 #define SVO_ANGLE_PAN_SCALING (18.1594) //angle in degrees
 #define SVO_ANGLE_TILT_SCALING (-18.1594)
@@ -82,10 +82,10 @@ int clsPTU::EveryRun()
 
 		PanTiltConpensateUAV(_state.GetState().a + m_panAngleOffset, _state.GetState().b + m_tiltAngleOffset,  &m_panAngle, &m_tiltAngle);
 
-		int nPan = int(PAN_TRIM + SVO_ANGLE_PAN_SCALING*m_panAngle*180/PI);
-		int nTilt = int(TILT_TRIM + SVO_ANGLE_TILT_SCALING*m_tiltAngle*180/PI);
+		int nPan = int(PAN_TRIM - SVO_ANGLE_PAN_SCALING*m_panAngle*180/PI);
+		int nTilt = int(TILT_TRIM - SVO_ANGLE_TILT_SCALING*m_tiltAngle*180/PI);
 
-//		m_PTU2_panAngle = 20*PI/180.0; m_PTU2_tiltAngle = 20*PI/180.0;
+		//m_PTU2_panAngle = 10*PI/180.0; m_PTU2_tiltAngle = 10*PI/180.0;
 		int nPTU2_Pan = int(PTU2_PAN_TRIM - SVO_ANGLE_PAN_SCALING*m_PTU2_panAngle*180/PI);
 		int nPTU2_Tilt = int(PTU2_TILT_TRIM - SVO_ANGLE_TILT_SCALING*m_PTU2_tiltAngle*180/PI);
 

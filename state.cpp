@@ -867,7 +867,7 @@ void clsState::LinearModelSimulate_QuadLion()
 		m_stateSimulation.r = m_equ.r;
 		m_stateSimulation.a = m_equ.a;
 		m_stateSimulation.b = m_equ.b;
-		m_stateSimulation.c = PI/4; //m_equ.c;
+		m_stateSimulation.c = 0; //m_equ.c;
 		m_stateSimulation.as = m_equ.as;
 		m_stateSimulation.bs = m_equ.bs;
 //		m_stateSimulation.rfb = m_equ.rfb;
@@ -895,7 +895,7 @@ void clsState::LinearModelSimulate_QuadLion()
 
 	m_stateSimulation.x += m_stateSimulation.ug*dt;
 	m_stateSimulation.y += m_stateSimulation.vg*dt;
-	//m_stateSimulation.z += m_stateSimulation.wg*dt;
+	m_stateSimulation.z += m_stateSimulation.wg*dt;
 
 	m_stateSimulation.longitude = m_stateSimulation.y / (_radius*cos(m_latitude0)) + m_longitude0;
 	m_stateSimulation.latitude = m_stateSimulation.x / _radius + m_latitude0;
@@ -920,11 +920,11 @@ if (m_nCount % _DEBUG_COUNT == 0) {
 	clsVector u(4, _u, TRUE);
 
 	double _x[4] = {
-		m_stateSimulation.u,// - m_equ.u,
-		m_stateSimulation.v,// - m_equ.v,
-		m_stateSimulation.w,// - m_equ.w,
-//		m_stateSimulation.r,// - m_equ.r,
-		m_stateSimulation.c,// - m_equ.c
+		m_stateSimulation.u,
+		m_stateSimulation.v,
+		m_stateSimulation.w,
+//		m_stateSimulation.r,
+		m_stateSimulation.c,
 	};
 	clsVector x(4, _x, TRUE);
 
@@ -964,7 +964,7 @@ if (m_nCount % _DEBUG_COUNT == 0) {
 
 	m_stateSimulation.u += _dx[0];
 	m_stateSimulation.v += _dx[1];
-	//m_stateSimulation.w += _dx[2];
+	m_stateSimulation.w += _dx[2];
 	m_stateSimulation.c += _dx[3];
 
 	B2G(&m_stateSimulation.a, &m_stateSimulation.u, &m_stateSimulation.ug);

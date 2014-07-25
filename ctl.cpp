@@ -7103,6 +7103,7 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 	static double wayPoint[100]; //0 is x , 1 is y;
 
 	if (!searchWaypointCalculated){
+		printf("[VisionInitialization] Search WayPoints:\n");
 		for (int i = 0; i < stepNr*4 + 1; i++){
 			switch(i%4 + 1){
 			case 1:
@@ -7124,6 +7125,7 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 			default:
 				break;
 			}
+			printf("%d [%.2f %.2f]\n", i, wayPoint[i*2], wayPoint[i*2+1]);
 		}
 		searchWaypointCalculated = true;
 	}
@@ -7145,9 +7147,7 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 
 			memset(&temp_SearchPathRef, 0, sizeof(QROTOR_REF));
 			temp_SearchPathRef.p_x_r = outerRefPos[0] + wayPoint[passedWayPointCount*2];
-//			temp_SearchPathRef.v_x_r = 1;
 			temp_SearchPathRef.p_y_r = outerRefPos[1] + wayPoint[passedWayPointCount*2+1];
-//			temp_SearchPathRef.v_y_r = 1;
 			temp_SearchPathRef.p_z_r = outerRefPos[2];
 			temp_SearchPathRef.psi_r = outerRefPos[3];
 			local_QROTOR_REF_initialized = true;

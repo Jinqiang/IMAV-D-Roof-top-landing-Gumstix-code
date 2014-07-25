@@ -460,8 +460,8 @@ int clsCAM::EveryRun()
 
 	//write the pose of the UAV
 	if ( m_nCount% 2 == 0  )  {
-		//MakeTelegraph(&tele, DATA_GUMSTIX2VISION, t, &temp_dataGumstix2Vision, sizeof(DATASTRUCT_GUMSTIX2VISION));
-		//int nWrite=write(m_nsCAM, tele.content, tele.size);
+		MakeTelegraph(&tele, DATA_GUMSTIX2VISION, t, &temp_dataGumstix2Vision, sizeof(DATASTRUCT_GUMSTIX2VISION));
+		int nWrite=write(m_nsCAM, tele.content, tele.size);
 		//printf("[CAM] Sent %d bytes to vision cpu\n", nWrite);
 	}
 	return TRUE;
