@@ -7187,8 +7187,10 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 		//Limit the max velocity and acceleration;
 		IP->MaxVelocityVector->VecData			[0]	=	 2;
 		IP->MaxVelocityVector->VecData			[1]	=	 2;
+		IP->MaxVelocityVector->VecData			[2]	=	 0.5;
 		IP->MaxAccelerationVector->VecData		[0]	=	 0.7;
 		IP->MaxAccelerationVector->VecData		[1]	=	 0.7;
+		IP->MaxAccelerationVector->VecData		[2]	=	 0.2;
 
 
 		memset(&temp_visionGuidanceFinalRef, 0, sizeof(QROTOR_REF));
