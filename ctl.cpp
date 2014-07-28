@@ -6162,6 +6162,7 @@ void clsCTL::Init()
 	m_bVisionInitialization = false;
 	m_bVisionGuidance = false;
 	m_bVisionGuidance = false;
+	m_bLandingFinishFlag = false;
 	m_bTransition2 = false;
 	m_bPath2 = false;
 	m_bLandingFlag = false;
@@ -6609,6 +6610,7 @@ int cls2014SAFMCPlan::Run(){
 				_state.ClearEvent();
 				_ctl.ResetVisionGuidanceFlag();
 				_ctl.ResetIntegratorFlag();
+				_ctl.SetlandingFinishFlag();
 				m_mode = TASK;
 				m_behavior.behavior = BEHAVIOR_ENGINEDOWN;
 			}
@@ -7221,7 +7223,7 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 	if (_cmm.GetViconFlag()) local_cutEnginHeight = LANDING_CUTENGINE_HEIGHT_VICON;
 	else local_cutEnginHeight = LANDING_CUTENGINE_HEIGHT_OUTDOOR;
 
-	if ( outerRefPos[2] > 2.5 ){
+	if ( outerRefPos[2] > 1.5 ){
 		//UAV is in the target area, can drop the payload, then finish the vision guidance phase;
 		_im9.SetDropSAFMC2014Target();
 		_ctl.SetSAFMCTargetDropped();
@@ -7316,7 +7318,7 @@ void clsCTL::ConstructLandingPath(UAVSTATE state, double pnr[4], double vnr[3], 
 		memset(&temp_LandingFinalRef, 0, sizeof(QROTOR_REF));
 		temp_LandingFinalRef.p_x_r = B5_pnr[0];
 		temp_LandingFinalRef.p_y_r = B5_pnr[1];
-		temp_LandingFinalRef.p_z_r = 10;
+		temp_LandingFinalRef.p_z_r = 2;
 		temp_LandingFinalRef.psi_r = B5_pnr[3];
 		temp_LandingFinalRef.v_z_r = 0.3;
 
@@ -7324,7 +7326,6 @@ void clsCTL::ConstructLandingPath(UAVSTATE state, double pnr[4], double vnr[3], 
 
 		if (!m_bSAFMCPathTotalTimeGetted){
 			printf("[ctl:Landing] state: %.2f %.2f %.2f %.2f %.2f %.2f\n", state.x, state.y, state.z, state.ug, state.vg, state.wg);
-			m_ReflexxesInitialized = false;
 			pathTotalTime = ReflexxesPathPlanning(state, temp_LandingFinalRef, pnr, vnr, anr);
 			m_bSAFMCPathTotalTimeGetted = true;
 		}
@@ -7400,14 +7401,14 @@ void clsCTL::ConstructLandingPath2(UAVSTATE state, double pnr[4], double vnr[3],
 double clsCTL::ReflexxesPathPlanning(UAVSTATE state, QROTOR_REF ref, double pnr[4], double vnr[3], double anr[3])
 {
 	if ( !m_ReflexxesInitialized ) {
-	    IP->CurrentPositionVector->VecData		[0]	= pnr[0];
-	    IP->CurrentPositionVector->VecData		[1]	= pnr[1];
-	    IP->CurrentPositionVector->VecData		[2]	= pnr[2];
-        IP->CurrentPositionVector->VecData      [3] = pnr[3];
+	    IP->CurrentPositionVector->VecData		[0]	= state.x;
+	    IP->CurrentPositionVector->VecData		[1]	= state.y;
+	    IP->CurrentPositionVector->VecData		[2]	= state.z;
+        IP->CurrentPositionVector->VecData      [3] = state.c;
 
-	    IP->CurrentVelocityVector->VecData		[0]	= vnr[0]	;
-	    IP->CurrentVelocityVector->VecData		[1]	= vnr[1]	;
-	    IP->CurrentVelocityVector->VecData		[2]	= vnr[2]	;
+	    IP->CurrentVelocityVector->VecData		[0]	= state.ug	;
+	    IP->CurrentVelocityVector->VecData		[1]	= state.vg	;
+	    IP->CurrentVelocityVector->VecData		[2]	= state.wg	;
 	    IP->CurrentVelocityVector->VecData      [3] = state.r    ;
 
 	    IP->CurrentAccelerationVector->VecData	[0]	= 0.0		;
