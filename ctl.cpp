@@ -7095,7 +7095,9 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 	///calculate the searching area waypoint
 	///depends on the search radius and step size;
 	int stepSize = 7; // 7 meters
-	double wayPoint[16] = {
+	int totalNumWayPoint = 9;
+	double wayPoint[18] = {
+			0, 0,
 			stepSize, 0,
 			0, stepSize,
 			-1*stepSize, 0,
@@ -7113,7 +7115,7 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 	static double tStartHover = 0;
 	static bool local_tStartInitialized = false;
 
-	if (passedWayPointCount < 8){
+	if (passedWayPointCount < totalNumWayPoint){
 		if (!local_QROTOR_REF_initialized){
 			//Limit the max velocity and acceleration;
 			IP->MaxVelocityVector->VecData			[0]	=	 2;
@@ -7163,7 +7165,7 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 	// End;
 
 	/// If still cannot detect the target after searching path, return home immediately;
-	if (passedWayPointCount == 8 && !local_tStartInitialized){
+	if (passedWayPointCount == totalNumWayPoint && !local_tStartInitialized){
 			/* If still cannot detect the target after
 			 * the searching path, then return home;*/
 			_im9.SetDropSAFMC2014Target();
