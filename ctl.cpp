@@ -7090,60 +7090,34 @@ void clsCTL::ConstructPath1Ref(double outerRefPos[4], double outerRefVel[3], dou
 }
 
 void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double outerRefVel[3], double outerRefAcc[3]){
-	// do nothing now;
-	double tStart = _ctl.GetPathStartTime();
-	double tElapse = ::GetTime() - tStart;
-
 	///calculate the searching area waypoint
 	///depends on the search radius and step size;
-	double maxCoverageRadius = 10;
-	int stepNr = 2; //2 circle
-
-	static bool searchWaypointCalculated = false;
-	static double wayPoint[100]; //0 is x , 1 is y;
-
-	if (!searchWaypointCalculated){
-		printf("[VisionInitialization] Search WayPoints:\n");
-		for (int i = 0; i < stepNr*4 + 1; i++){
-			switch(i%4 + 1){
-			case 1:
-				wayPoint[i*2] = (i/2 + 1)*(maxCoverageRadius/(double)stepNr);
-				wayPoint[i*2 + 1] = 0;
-				break;
-			case 2:
-				wayPoint[i*2] = 0;
-				wayPoint[i*2 + 1] = (i/2 + 1)*(maxCoverageRadius/(double)stepNr);
-				break;
-			case 3:
-				wayPoint[i*2] = (-1)*(i/2 + 1)*(maxCoverageRadius/(double)stepNr);
-				wayPoint[i*2 + 1] = 0;
-				break;
-			case 4:
-				wayPoint[i*2] = 0;
-				wayPoint[i*2 + 1] = (-1)*(i/2 + 1)*(maxCoverageRadius/(double)stepNr);
-				break;
-			default:
-				break;
-			}
-			printf("%d [%.2f %.2f]\n", i, wayPoint[i*2], wayPoint[i*2+1]);
-		}
-		searchWaypointCalculated = true;
-	}
-	// End of calculation;
+	int stepSize = 7; // 7 meters
+	double wayPoint[16] = {
+			stepSize, 0,
+			0, stepSize,
+			-1*stepSize, 0,
+			-1*stepSize, 0,
+			0, -1*stepSize,
+			0, -1*stepSize,
+			stepSize, 0,
+			stepSize, 0
+	};
 
 	/// Generate the path references for the search path;
 	static int passedWayPointCount = 0;
 	static bool local_QROTOR_REF_initialized = false;
 	static QROTOR_REF temp_SearchPathRef;
+	static double tStartHover = 0;
+	static bool local_tStartInitialized = false;
 
-	if (passedWayPointCount < stepNr*4 + 1){
+	if (passedWayPointCount < 8){
 		if (!local_QROTOR_REF_initialized){
 			//Limit the max velocity and acceleration;
-			IP->MaxVelocityVector->VecData			[0]	=	 1;
-			IP->MaxVelocityVector->VecData			[1]	=	 1;
+			IP->MaxVelocityVector->VecData			[0]	=	 2;
+			IP->MaxVelocityVector->VecData			[1]	=	 2;
 			IP->MaxAccelerationVector->VecData		[0]	=	 0.5;
 			IP->MaxAccelerationVector->VecData		[1]	=	 0.5;
-
 
 			memset(&temp_SearchPathRef, 0, sizeof(QROTOR_REF));
 			temp_SearchPathRef.p_x_r = outerRefPos[0] + wayPoint[passedWayPointCount*2];
@@ -7152,9 +7126,18 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 			temp_SearchPathRef.psi_r = outerRefPos[3];
 			local_QROTOR_REF_initialized = true;
 		}
-		if (ReflexxesPathPlanning(_state.GetState(), temp_SearchPathRef, outerRefPos, outerRefVel, outerRefAcc) < 0.5){
-			local_QROTOR_REF_initialized = false;
-			passedWayPointCount++;
+		if (ReflexxesPathPlanning(_state.GetState(), temp_SearchPathRef, outerRefPos, outerRefVel, outerRefAcc) < 0.2){
+			/// Arrive at the waypoint, hover there for 30 s
+			if (!local_tStartInitialized){
+				local_tStartInitialized = true;
+				tStartHover = ::GetTime();
+			}
+
+			if (::GetTime() - tStartHover > 30){
+				local_QROTOR_REF_initialized = false;
+				passedWayPointCount++;
+				local_tStartInitialized = false;
+			}
 		}
 	}
 	// End of the reference generation
@@ -7167,6 +7150,7 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 	else{
 		local_targetDetectedCount = 0;
 	}
+
 	if (local_targetDetectedCount >= 20){
 		//vision has a good viewPoint, can detect the target stably;
 		//Finish the vision initialization phase, enter the vision guidance phase;
@@ -7177,7 +7161,7 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 	// End;
 
 	/// If still cannot detect the target after searching path, return home immediately;
-	if (passedWayPointCount == stepNr*4 + 1){
+	if (passedWayPointCount == 8 && !local_tStartInitialized){
 			/* If still cannot detect the target after
 			 * the searching path, then return home;*/
 			_im9.SetDropSAFMC2014Target();
