@@ -533,6 +533,7 @@ struct EQUILIBRIUM {
 };
 
 struct DATASTRUCT_GUMSTIX2VISION{
+	int landingFinishFlag; int dummy;
 	double gumstixTime;
 	double x, y, z;				//position or (longitude, latitude, altitude)
 	double ug,vg,wg;				//velocity
