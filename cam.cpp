@@ -448,6 +448,7 @@ int clsCAM::EveryRun()
 	DATASTRUCT_GUMSTIX2VISION temp_dataGumstix2Vision;
 	memset(&temp_dataGumstix2Vision, 0, sizeof(DATASTRUCT_GUMSTIX2VISION));
 
+	temp_dataGumstix2Vision.landingFinishFlag = _ctl.GetLandingFinishFlag();
 	temp_dataGumstix2Vision.gumstixTime = ::GetTime();
 	temp_dataGumstix2Vision.x = state.x; temp_dataGumstix2Vision.y = state.y; temp_dataGumstix2Vision.z = state.z;
 	temp_dataGumstix2Vision.ug = state.ug; temp_dataGumstix2Vision.vg = state.vg; temp_dataGumstix2Vision.wg = state.wg;
@@ -460,8 +461,8 @@ int clsCAM::EveryRun()
 
 	//write the pose of the UAV
 	if ( m_nCount% 2 == 0  )  {
-		//MakeTelegraph(&tele, DATA_GUMSTIX2VISION, t, &temp_dataGumstix2Vision, sizeof(DATASTRUCT_GUMSTIX2VISION));
-		//int nWrite=write(m_nsCAM, tele.content, tele.size);
+		MakeTelegraph(&tele, DATA_GUMSTIX2VISION, t, &temp_dataGumstix2Vision, sizeof(DATASTRUCT_GUMSTIX2VISION));
+		int nWrite=write(m_nsCAM, tele.content, tele.size);
 		//printf("[CAM] Sent %d bytes to vision cpu\n", nWrite);
 	}
 	return TRUE;

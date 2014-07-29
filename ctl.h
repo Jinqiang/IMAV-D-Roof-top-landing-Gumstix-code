@@ -322,6 +322,8 @@ private:
 	BOOL m_bTransition2;
 	BOOL m_bPath2;
 	BOOL m_bLandingFlag;
+	BOOL m_bLandingFinishFlag;
+
 	double B5_wg0;
 	bool m_bSAFMCPathTotalTimeGetted;
 	bool m_bSAFMCtargetDropped;
@@ -370,6 +372,11 @@ public:
 	bool GetLandingFlag() {return m_bLandingFlag; }
 	void SetLandingFlag() { m_bLandingFlag = true; }
 	void ResetLandingFlag() { m_bLandingFlag = false; }
+
+	bool GetLandingFinishFlag() { return m_bLandingFinishFlag;}
+	void SetlandingFinishFlag() { m_bLandingFinishFlag = true;}
+	void ResetlandingFinishFlag() { m_bLandingFinishFlag = false;}
+
 
 	void ConstructTakeOffPath(UAVSTATE state, double height, /*final height should be negative*/ double pnr[4], double vnr[3], double anr[3]);
 	void ConstructTransition1PathRef(double outerRefPos[4], double outerRefVel[3], double outerRefAcc[3]);

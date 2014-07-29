@@ -50,7 +50,7 @@ BOOL clsDAQ::InitThread()
 	m_nDAQ = 0;
 	m_tDAQ0 = -1;
 
-	m_nsSNA = ::open("/dev/serusb6", O_RDWR | O_NOCTTY );//O_NONBLOCK
+	//m_nsSNA = ::open("/dev/serusb6", O_RDWR | O_NOCTTY );//O_NONBLOCK
 //	m_nsSNA = ::open("/dev/ser2", O_RDWR | O_NOCTTY );//O_NONBLOCK
 	if (m_nsSNA == -1) {
 		printf("[DAQ] Sonar usb serial port cannot be opened!\n");
