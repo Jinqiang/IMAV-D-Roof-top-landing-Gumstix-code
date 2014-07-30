@@ -41,7 +41,7 @@ EQUILIBRIUM _equ_Hover = {
 	0, 0, 0,		// p, q, r
 	0, 0, 0,		// a, b, c
 	0, 0, 0,		// as,bs,rfb
-	-0.00, -0.00, -0.1722, 0.00, 0.57		//ea, ee, eu, er, et (0.65)
+	-0.00, -0.00, -0.1722, 0.00, 0.47		//ea, ee, eu, er, et (0.65)
 };
 
 clsState _state;

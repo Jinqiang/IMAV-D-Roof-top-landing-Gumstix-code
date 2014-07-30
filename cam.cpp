@@ -181,10 +181,9 @@ void clsCAM::Input()
 BOOL clsCAM::ReadCommand(COMMAND *pCmd)
 {
 	int nRead = read(m_nsCAM, m_buffer+m_nBuffer, MAX_CAMBUFFER-m_nBuffer);	//get data as many as it can
-
 	if (nRead < 0) return FALSE;
-	if (/*nRead != -1*/ nRead > 0){
-		//printf("[CAM] ReadCommand, read byte %d, buffer size %d\n", nRead, m_nBuffer);
+	if (nRead > 0){
+//		printf("[CAM] ReadCommand, read byte %d, buffer size %d\n", nRead, m_nBuffer);
 //		printf("tElapse %.2f: ", ::GetTime());
 //		for (int i= 0; i<nRead; i++)
 //		printf("%02x ",  (unsigned char)m_buffer[m_nBuffer + i]);

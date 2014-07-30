@@ -6499,6 +6499,12 @@ int cls2014SAFMCPlan::Run(){
 			m_mode = ENGINE_UP;
 			_ctl.ResetIntegratorFlag();
 			m_behavior.behavior = BEHAVIOR_ENGINEUP;
+
+//			_state.ClearEvent();
+//			m_mode = VISION_INITIALIZATION;
+//			_ctl.ResetPath1Flag();
+//			_ctl.SetVisionInitializationFlag();
+//			m_behavior.behavior = BEHAVIOR_PATHA;
 		}
 		break;
 
@@ -7059,7 +7065,7 @@ void clsCTL::ConstructTransition1PathRef(double outerRefPos[4], double outerRefV
 
 		if (!m_bSAFMCPathTotalTimeGetted){
 			printf("[ctl:Transition-1] final_pos: %.2f %.2f %.2f\n", final_pos[0], final_pos[1], final_pos[2]);
-			m_ReflexxesInitialized = false;
+//			m_ReflexxesInitialized = false;
 			pathTotalTime = ReflexxesPathPlanning(_state.GetState(), temp_TransitionFinalRef, outerRefPos, outerRefVel, outerRefAcc);
 			//printf("[ctl:Transition-1] Pos: %.2f %.2f %.2f %.2f; Vel: %.2f %.2f %.2f\n", final_pos[0], final_pos[1], final_pos[2], final_pos[3], final_vel[0], final_vel[1], final_vel[2]);
 			m_bSAFMCPathTotalTimeGetted = true;
@@ -7150,12 +7156,15 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 	static int local_targetDetectedCount = 0;
 	if (_cam.GetVisionTargetInfo().flags[0]){ // flag[0] --> target detected (true);
 		local_targetDetectedCount++;
+		printf("[visionInitialization] local_targetDetectedCount: %d\n", local_targetDetectedCount);
 	}
 	else{
 		local_targetDetectedCount = 0;
 	}
 
-	if (local_targetDetectedCount >= 20){
+	//printf("_cam.GetVisionTargetInfo().flags[0]: %d\n", _cam.GetVisionTargetInfo().flags[0]);
+
+	if (local_targetDetectedCount >= 15){
 		//vision has a good viewPoint, can detect the target stably;
 		//Finish the vision initialization phase, enter the vision guidance phase;
 		B5_t2 = -1;
