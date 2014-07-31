@@ -6499,12 +6499,6 @@ int cls2014SAFMCPlan::Run(){
 			m_mode = ENGINE_UP;
 			_ctl.ResetIntegratorFlag();
 			m_behavior.behavior = BEHAVIOR_ENGINEUP;
-
-//			_state.ClearEvent();
-//			m_mode = VISION_INITIALIZATION;
-//			_ctl.ResetPath1Flag();
-//			_ctl.SetVisionInitializationFlag();
-//			m_behavior.behavior = BEHAVIOR_PATHA;
 		}
 		break;
 

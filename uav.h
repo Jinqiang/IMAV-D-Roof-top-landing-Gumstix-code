@@ -426,7 +426,7 @@ inline void PUTDOUBLE(void *buf, double a) { PUTDOUBLEBYTES(buf, a); }
 #define ID_QUADLION				14
 #define ID_FEILION				10
 #define ID_GREMLION				11
-#define ID_ALL					12
+#define ID_ALL					1
 
 #if (_DEBUG)
 #define COUNT_CMM _DEBUG_COUNT_1

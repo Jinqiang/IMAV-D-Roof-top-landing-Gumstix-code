@@ -136,25 +136,18 @@ void clsCAM::Input()
 			switch (cmd.code){
 			case DATA_VISION2GUMSTIX:{
 				memcpy(&m_dataFromVision, cmd.parameter, sizeof(DATASTRUCT_VISION2GUMSTIX));
-
-//				for (int i = 0; i< 10; i++) printf("%d ", m_dataFromVision.flags[i]);
-//				printf("%.2f ", m_dataFromVision.masterMind_time);
-//				for(int i = 0; i< 3; i++) printf("%.2f ", m_dataFromVision.cameraFrame_dvec[i]);
-//				for(int i = 0; i< 3; i++) printf("%.2f ", m_dataFromVision.nedFrame_dvec[i]);
-//				printf("\n");
-
 				////			for gimble case;
 				double abc[3] = {(-1.0)*_state.GetState().a, (-1.0)*_state.GetState().b, 0};
 				double r_t_c[3] = {m_dataFromVision.cameraFrame_dvec[0], m_dataFromVision.cameraFrame_dvec[1], m_dataFromVision.cameraFrame_dvec[2]};
 
 				double camera_body[3] = {0};
 				B2G(abc, r_t_c, camera_body);
-				camera_body[0] -= 0.13;
+				//camera_body[0] -= 0;
 				camera_body[1] += 0;
 				camera_body[2] -= 0.2;
 
 				//printf("[Cam Target Camera-BodyFrame] %d %d %.2f %.2f %.2f\n", m_dataFromVision.flags[0], m_dataFromVision.flags[1], camera_body[0], camera_body[1], camera_body[2]);
-
+				m_targetInfoUpdate.masterMind_time = m_dataFromVision.masterMind_time;
 				for(int i = 0 ; i < 10; i++) m_targetInfoUpdate.flags[i] = m_dataFromVision.flags[i];
 
 				double abc_ned[3] = {_state.GetState().a, _state.GetState().b, _state.GetState().c};
@@ -166,9 +159,14 @@ void clsCAM::Input()
 				m_targetInfoUpdate.nedFrame_dvec[0] = delta_ned[0];
 				m_targetInfoUpdate.nedFrame_dvec[1] = delta_ned[1];
 				m_targetInfoUpdate.nedFrame_dvec[2] = delta_ned[2];
-				if(m_nCount%50 == 0){
-					printf("[Cam Target Camera-NEDFrame] %d %d %.2f %.2f %.2f\n", m_targetInfoUpdate.flags[0], m_targetInfoUpdate.flags[1], m_targetInfoUpdate.nedFrame_dvec[0], m_targetInfoUpdate.nedFrame_dvec[1], m_targetInfoUpdate.nedFrame_dvec[2]);
+
+				static int count = 0;
+				count++;
+				if (count > 1e6) count = 0;
+				if(count%10 == 0){
+					printf("[Cam Target Camera-NEDFrame] time: %.2f Flag[0] %d nedVec %.2f %.2f %.2f\n", m_targetInfoUpdate.masterMind_time,m_targetInfoUpdate.flags[0], m_targetInfoUpdate.nedFrame_dvec[0], m_targetInfoUpdate.nedFrame_dvec[1], m_targetInfoUpdate.nedFrame_dvec[2]);
 				}
+
 				break;
 				}
 			}

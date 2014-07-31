@@ -134,8 +134,10 @@ void clsCMM::SendAllMessages()
 
 int clsCMM::EveryRun()
 {
-	TELEGRAPH tele;
+	/* Check whether the socket connection is still alive */
+	/* End of connection checking */
 
+	TELEGRAPH tele;
 /*	if (m_nCount % LEADER_UPDATE != 0)
 		return TRUE;
 
@@ -161,6 +163,11 @@ int clsCMM::EveryRun()
 
 //	if (m_nCount % COUNT_CMM != 0 || (m_nCount == 0)) return TRUE;
 	if (m_nCount % 5 != 0 ) return TRUE;
+//	if (system("ping -c 1 -s 1 -w 0.01 -q 192.168.1.1"))
+//	{
+//			return TRUE;
+//	}
+
 //	double t;
 //	IM6PACK pack6;
 

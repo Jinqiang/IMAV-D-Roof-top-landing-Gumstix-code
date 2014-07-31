@@ -31,7 +31,7 @@ the implementation file of onboard software of helicopter
 #include "ptu.h"
 
 // Global variables
-int _HELICOPTER = 9;
+int _HELICOPTER = 14;
 
 double _gravity = 9.781;	// gravitational constant
 double _radius = 6.3781e6;	// radius of earth
