@@ -6515,12 +6515,6 @@ int cls2014SAFMCPlan::Run(){
 
 		case TAKEING_OFF:
 			if ( (event.code == EVENT_BEHAVIOREND && (int &)event.info[0] == BEHAVIOR_PATHA) ) {
-////				 Taking-off, then hold;
-//				_state.ClearEvent();
-//				m_mode = HOLD;
-//				_ctl.ResetTakeOffFlag();
-//				_ctl.SetIntegratorFlag();
-//				m_behavior.behavior = BEHAVIOR_PATHA;
 
 				//Fly to target point;
 				_state.ClearEvent();
@@ -6529,21 +6523,6 @@ int cls2014SAFMCPlan::Run(){
 				_ctl.SetIntegratorFlag();
 				_ctl.SetTransition1Flag();
 				m_behavior.behavior = BEHAVIOR_PATHA;
-
-////				 Taking-off, hold 5s, then landing;
-//				_state.ClearEvent();
-//				m_mode = LANDING;
-//				_ctl.ResetTakeOffFlag();
-//				_ctl.SetIntegratorFlag();
-//				_ctl.SetLandingFlag();
-//				m_behavior.behavior = BEHAVIOR_PATHA;
-
-//				// For vision guidance test;
-//				_state.ClearEvent();
-//				m_mode = VISION_INITIALIZATION;
-//				_ctl.ResetTakeOffFlag();
-//				_ctl.SetVisionInitializationFlag();
-//				m_behavior.behavior = BEHAVIOR_PATHA;
 			}
 			break;
 
@@ -7218,7 +7197,7 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 	if (_cam.GetVisionTargetInfo().flags[0] && m_nCount%10 == 0){
 		local_visionGuidanceXYRef.p_x_r = outerRefPos[0] + _cam.GetVisionTargetInfo().nedFrame_dvec[0];
 		local_visionGuidanceXYRef.p_y_r = outerRefPos[1] + _cam.GetVisionTargetInfo().nedFrame_dvec[1];
-		if (sqrt(pow(_cam.GetVisionTargetInfo().nedFrame_dvec[0], 2) + pow(_cam.GetVisionTargetInfo().nedFrame_dvec[1], 2)) < 2){
+		if (sqrt(pow(_cam.GetVisionTargetInfo().nedFrame_dvec[0], 2) + pow(_cam.GetVisionTargetInfo().nedFrame_dvec[1], 2)) < 0.4){
 			local_startLandingFlag = true;
 		}
 	}
@@ -7342,24 +7321,20 @@ void clsCTL::ConstructTransition2PathRef(double outerRefPos[4], double outerRefV
 			temp_TransitionFinalRef.agy_r = final_acc[1];
 			temp_TransitionFinalRef.agz_r = final_acc[2];
 
-			static double pathTotalTime = 0;
-			static bool bTotalPathTimeGetted = false;
+			static bool bReflexxxInialized = false;
 
-//			if (!bTotalPathTimeGetted){
-//				m_ReflexxesInitialized = false;
-//				pathTotalTime = ReflexxesPathPlanning(_state.GetState(), temp_TransitionFinalRef, outerRefPos, outerRefVel, outerRefAcc);
-//				bTotalPathTimeGetted = true;
-//				printf("[ctl:Transition2] pathTotalTime: %.2f t: %.2f\n", pathTotalTime, tElapse);
-//			}
-//			ReflexxesPathPlanning(_state.GetState(), temp_TransitionFinalRef, outerRefPos, outerRefVel, outerRefAcc);
-
-			if(m_nCount%100 == 0){
-				printf("[ctl:Transition-2] totalPathTime %.2f; t: %.2f; pnr: %.2f %.2f %.2f %.2f; vnr: %.2f %.2f %.2f\n", pathTotalTime, tElapse, outerRefPos[0], outerRefPos[1], outerRefPos[2], outerRefPos[3], outerRefVel[0], outerRefVel[1], outerRefVel[2]);
+			if (!bReflexxxInialized){
+				m_ReflexxesInitialized = false;
+				bReflexxxInialized = true;
 			}
 			if (ReflexxesPathPlanning(_state.GetState(), temp_TransitionFinalRef, outerRefPos, outerRefVel, outerRefAcc) < 0.2){
 				B5_t2 = -1;
 				m_bSAFMCPathTotalTimeGetted = false;
 				_state.SetEvent(EVENT_BEHAVIOREND, BEHAVIOR_PATHA);
+			}
+
+			if(m_nCount%100 == 0){
+				printf("[visionGuidance] B5_pnr: %.2f %.2f %.2f %.2f; B5_vnr: %.2f %.2f %.2f\n", outerRefPos[0], outerRefPos[1], outerRefPos[2], outerRefPos[3], outerRefVel[0], outerRefVel[1], outerRefVel[2]);
 			}
 }
 
