@@ -12,6 +12,10 @@
 #include <netdb.h>
 #include <ifaddrs.h>
 #include <netinet/in.h>
+#include<unistd.h>
+#include<stdlib.h>
+#include<string.h>
+#include<time.h>
 
 #include "uav.h"
 #include "laser.h"
@@ -115,6 +119,9 @@ BOOL clsCMM::InitThread()
 	m_bVicon = FALSE;
 	m_nMessage = 0;
 
+	m_bLostConnection = false;
+	m_LostConnectionTime = 0;
+
 	printf("[CMM] Start\n");
 
 	return TRUE;
@@ -134,42 +141,41 @@ void clsCMM::SendAllMessages()
 
 int clsCMM::EveryRun()
 {
-	/* Check whether the socket connection is still alive */
-	/* End of connection checking */
+
 
 	TELEGRAPH tele;
-/*	if (m_nCount % LEADER_UPDATE != 0)
+	if (m_nCount % 10 != 0 ) return TRUE;
+	/* Check whether the socket connection is still alive */
+	static bool bStartTimeInitialized = false;
+	if (m_bLostConnection){
+		// connection lost, ping every 5 s
+		if (!bStartTimeInitialized){
+			m_LostConnectionTime = ::GetTime();
+			bStartTimeInitialized = true;
+		}
+
+		if (::GetTime() - m_LostConnectionTime > 10){
+			if (system("ping -s 1 -c 1 -w 1 192.168.1.1 >> /fs/sd/null"))
+				{
+					m_bLostConnection = true;
+					bStartTimeInitialized = false;
+					return TRUE;
+				}
+			else{
+				m_bLostConnection = false;
+			}
+		}
 		return TRUE;
-
-	double tCoop = _coop.GetCoopTime();
-	if ( tCoop > 0 && _coop.GetCoopStart() )
-	{
-		UAVSTATE& state = _state.GetState();
-		RPTSTATE& RPTState = _state.GetRPTState();
-
-
-		double t = ::GetTime();
-		double ldStatus[11] = {tPath t, state.x, state.y, state.z, state.c, state.ug, state.vg, state.wg, state.p, state.q, state.r};
-		double flRef[4];
-		int cmdPara4Fl[4] = {0};
-		double actionPara4Fl[9] = {flRef[0], flRef[1], flRef[2], flRef[3], 0, 0, 0, 0, 0};
-	//	MakeCoopPkt(LEADERFORMATION_UPDATE, cmdPara4Fl, actionPara4Fl);
-		_coop.MakeCoopPkt(LEADERFORMATION_UPDATE, NULL, ldStatus);
-
-		COOP_PKT coopedPkt = _coop.FetchCoopedPkt();
-		MakeTelegraph(&tele, DATA_COOP, tCoop, &coopedPkt, sizeof(COOP_PKT));
-		write(m_nsCMM, tele.content, tele.size);
-	}*/
-
-//	if (m_nCount % COUNT_CMM != 0 || (m_nCount == 0)) return TRUE;
-	if (m_nCount % 5 != 0 ) return TRUE;
-//	if (system("ping -c 1 -s 1 -w 0.01 -q 192.168.1.1"))
-//	{
-//			return TRUE;
-//	}
-
-//	double t;
-//	IM6PACK pack6;
+	}
+	else{
+		if (system("ping -s 1 -c 1 -w 1 192.168.1.1 >> /fs/sd/null"))
+			{
+				m_bLostConnection = true;
+				bStartTimeInitialized = false;
+				return TRUE;
+			}
+	}
+	/* End of connection checking */
 
 	SendAllMessages();
 

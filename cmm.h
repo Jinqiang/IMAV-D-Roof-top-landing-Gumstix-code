@@ -104,6 +104,8 @@ protected:
 	CMM_CONFIG m_cmmConfig;
 	TCP_CONFIG m_tcpConfig;
 	BOOL m_bVicon;
+	bool m_bLostConnection;
+	double m_LostConnectionTime;
 
 public:
 	BOOL Open();
