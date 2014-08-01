@@ -2300,7 +2300,7 @@ void clsCTL::A8()				//for engine up and down control (auto takeoff/landing)
 	if (A8_mode == A8MODE_ENGINEDOWN) {
 		m_sig.aileron = 0; m_sig.elevator = 0; m_sig.rudder = 0; m_sig.throttle = 0;
 		static double startTime = ::GetTime();
-		if (GetTime() - startTime > 1*60){
+		if (GetTime() - startTime > 3*60){
 			_state.SetEvent(EVENT_BEHAVIOREND, BEHAVIOR_ENGINEDOWN);
 			printf("[ctl::A8] Task Finished\n");
 		}
@@ -6962,6 +6962,13 @@ void clsCTL::ConstructTakeOffPath(UAVSTATE state, double height, double pnr[4], 
 	double tStart = _ctl.GetPathStartTime();
 	double tElapse = ::GetTime() - tStart;
 
+	IP->MaxVelocityVector->VecData			[0]	=	 2;
+	IP->MaxVelocityVector->VecData			[1]	=	 2;
+	IP->MaxVelocityVector->VecData			[2]	=	 1.5;
+	IP->MaxAccelerationVector->VecData		[0]	=	 0.7;
+	IP->MaxAccelerationVector->VecData		[1]	=	 0.7;
+	IP->MaxAccelerationVector->VecData		[2]	=	 0.5;
+
 	QROTOR_REF temp_takeOffFinalRef;
 	memset(&temp_takeOffFinalRef, 0, sizeof(QROTOR_REF));
 	temp_takeOffFinalRef.p_x_r = B5_x0;
@@ -7158,7 +7165,7 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 
 	//printf("_cam.GetVisionTargetInfo().flags[0]: %d\n", _cam.GetVisionTargetInfo().flags[0]);
 
-	if (local_targetDetectedCount >= 15){
+	if (local_targetDetectedCount > 10){
 		//vision has a good viewPoint, can detect the target stably;
 		//Finish the vision initialization phase, enter the vision guidance phase;
 		B5_t2 = -1;
@@ -7181,56 +7188,99 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 }
 
 void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerRefVel[3], double outerRefAcc[3]){
-	double tStart = _ctl.GetPathStartTime();
-	double tElapse = ::GetTime() - tStart;
+	double local_outerXYRefPos[4];	double local_outerXYRefVel[3]; double local_outerXYRefAcc[3];
+	memcpy(local_outerXYRefPos, outerRefPos, sizeof(double)*4);
+	memcpy(local_outerXYRefVel, outerRefVel, sizeof(double)*3);
+	memcpy(local_outerXYRefAcc, outerRefAcc, sizeof(double)*3);
 
-	// Vision guidance phase, guide the UAV to the target area;
-	static QROTOR_REF temp_visionGuidanceFinalRef;
+	static QROTOR_REF local_visionGuidanceXYRef;
 	static bool local_QROTOR_REF_initialized = false;
+	static bool local_startLandingFlag = false;
 
-	if(!local_QROTOR_REF_initialized){
-		//Limit the max velocity and acceleration;
+	if (!local_QROTOR_REF_initialized){
+		local_QROTOR_REF_initialized = true;
 		IP->MaxVelocityVector->VecData			[0]	=	 2;
 		IP->MaxVelocityVector->VecData			[1]	=	 2;
-		IP->MaxVelocityVector->VecData			[2]	=	 0.5;
+		IP->MaxVelocityVector->VecData			[2]	=	 0.3;
 		IP->MaxAccelerationVector->VecData		[0]	=	 0.7;
 		IP->MaxAccelerationVector->VecData		[1]	=	 0.7;
-		IP->MaxAccelerationVector->VecData		[2]	=	 0.2;
+		IP->MaxAccelerationVector->VecData		[2]	=	 0.5;
 
+		memset(&local_visionGuidanceXYRef, 0, sizeof(QROTOR_REF));
 
-		memset(&temp_visionGuidanceFinalRef, 0, sizeof(QROTOR_REF));
-		temp_visionGuidanceFinalRef.p_x_r = outerRefPos[0];
-		temp_visionGuidanceFinalRef.p_y_r = outerRefPos[1];
-		temp_visionGuidanceFinalRef.p_z_r = outerRefPos[2];
-		temp_visionGuidanceFinalRef.psi_r = outerRefPos[3];
-		local_QROTOR_REF_initialized = true;
+		// Initialize the horizontal direction;
+		local_visionGuidanceXYRef.p_x_r = outerRefPos[0];
+		local_visionGuidanceXYRef.p_y_r = outerRefPos[1];
+		local_visionGuidanceXYRef.p_z_r = outerRefPos[2];
+		local_visionGuidanceXYRef.psi_r = outerRefPos[3];
 	}
-
-	static int count = 0;
-	count++;
-	if (count > 1e6) count = 0;
-
-	if (_cam.GetVisionTargetInfo().flags[0] && count%25 == 0){
-		temp_visionGuidanceFinalRef.p_x_r = _cam.GetVisionTargetInfo().nedFrame_dvec[0] + outerRefPos[0];
-		temp_visionGuidanceFinalRef.p_y_r = _cam.GetVisionTargetInfo().nedFrame_dvec[1] + outerRefPos[1];
-		if (sqrt(pow(_cam.GetVisionTargetInfo().nedFrame_dvec[0], 2) + pow(_cam.GetVisionTargetInfo().nedFrame_dvec[1], 2)) < 0.5){
-			temp_visionGuidanceFinalRef.p_z_r = 2;
-			printf("[CTL] Landing start\n");
+	// Vision guidance phase, guide the UAV to the target area;
+	if (_cam.GetVisionTargetInfo().flags[0] && m_nCount%10 == 0){
+		local_visionGuidanceXYRef.p_x_r = outerRefPos[0] + _cam.GetVisionTargetInfo().nedFrame_dvec[0];
+		local_visionGuidanceXYRef.p_y_r = outerRefPos[1] + _cam.GetVisionTargetInfo().nedFrame_dvec[1];
+		if (sqrt(pow(_cam.GetVisionTargetInfo().nedFrame_dvec[0], 2) + pow(_cam.GetVisionTargetInfo().nedFrame_dvec[1], 2)) < 2){
+			local_startLandingFlag = true;
 		}
-		printf("[visionGuidance] CameraRelNED: %.2f %.2f\n", _cam.GetVisionTargetInfo().nedFrame_dvec[0], _cam.GetVisionTargetInfo().nedFrame_dvec[1]);
 	}
 
-	ReflexxesPathPlanning(_state.GetState(), temp_visionGuidanceFinalRef, outerRefPos, outerRefVel, outerRefAcc);
+	local_outerXYRefPos[2] = local_visionGuidanceXYRef.p_z_r;
+	ReflexxesPathPlanning(_state.GetState(), local_visionGuidanceXYRef, local_outerXYRefPos, local_outerXYRefVel, local_outerXYRefAcc);
 
-	if(count%100 == 0){
-		printf("[visionGuidance] time %.2f B5_pnr: %.2f %.2f %.2f %.2f; B5_vnr: %.2f %.2f %.2f\n", tElapse, outerRefPos[0], outerRefPos[1], outerRefPos[2], outerRefPos[3], outerRefVel[0], outerRefVel[1], outerRefVel[2]);
+//	if(m_nCount%50 == 0){
+//			printf("[visionGuidance] local_outerXYRefPos: %.2f %.2f %.2f %.2f; B5_vnr: %.2f %.2f %.2f\n", local_outerXYRefPos[0], local_outerXYRefPos[1], local_outerXYRefPos[2], local_outerXYRefPos[3], local_outerXYRefVel[0], local_outerXYRefVel[1], local_outerXYRefVel[2]);
+//	}
+
+	outerRefPos[0] = local_outerXYRefPos[0]; outerRefPos[1] = local_outerXYRefPos[1]; outerRefPos[3] = local_outerXYRefPos[3];
+	outerRefVel[0] = local_outerXYRefVel[0]; outerRefVel[1] = local_outerXYRefVel[1];
+	outerRefAcc[0] = local_outerXYRefAcc[0]; outerRefAcc[1] = local_outerXYRefAcc[1];
+
+	/// Generate references for z direction;
+	if (local_startLandingFlag){
+		static bool local_startTimeInitialized = false;
+		static double tStart = 0;
+		if (!local_startTimeInitialized){
+			local_startTimeInitialized = true;
+			tStart = ::GetTime();
+		}
+		double tElapse = ::GetTime() - tStart;
+		double velDown = 0.5;
+		double accDown = 0.25;
+		double velSlow = 0.2;
+		double tRamp = velDown / accDown;
+		double dt = 0.02;
+
+		if( fabs(_state.GetState().z) > 5){ // >5m
+			outerRefAcc[2] = 0;
+			if(tElapse < tRamp){
+				outerRefAcc[2] = accDown;
+				outerRefVel[2] += outerRefAcc[2]*dt;
+				outerRefPos[2] += outerRefVel[2]*dt;
+			}
+			else{
+				outerRefVel[2] += outerRefAcc[2]*dt;
+				outerRefPos[2] += outerRefVel[2]*dt;
+			}
+		}
+		else if( fabs(_state.GetState().z) < 5  ){ //8cm - 5m, decrease to 0.2m/s
+			outerRefAcc[2] = 0;
+			if(outerRefVel[2] > velSlow){
+				outerRefAcc[2] = -accDown;
+				outerRefVel[2] += outerRefAcc[2]*dt;
+				outerRefPos[2] += outerRefVel[2]*dt;
+			}
+			else{
+				outerRefVel[2] = velSlow;
+				outerRefPos[2] += outerRefVel[2]*dt;
+			}
+		}
+	}
+	/// end
+	if(m_nCount%50 == 0){
+		printf("[visionGuidance] B5_pnr: %.2f %.2f %.2f %.2f; B5_vnr: %.2f %.2f %.2f\n", outerRefPos[0], outerRefPos[1], outerRefPos[2], outerRefPos[3], outerRefVel[0], outerRefVel[1], outerRefVel[2]);
 	}
 	// finish the vision guidance phase;
-	double local_cutEnginHeight = 0;
-	if (_cmm.GetViconFlag()) local_cutEnginHeight = LANDING_CUTENGINE_HEIGHT_VICON;
-	else local_cutEnginHeight = LANDING_CUTENGINE_HEIGHT_OUTDOOR;
 
-	if ( outerRefPos[2] > 1.5 ){
+	if ( outerRefPos[2] > 0.5 ){
 		//UAV is in the target area, can drop the payload, then finish the vision guidance phase;
 		_im9.SetDropSAFMC2014Target();
 		_ctl.SetSAFMCTargetDropped();
@@ -7251,14 +7301,30 @@ void clsCTL::ConstructTransition2PathRef(double outerRefPos[4], double outerRefV
 			static bool bInitializedTransitPosition = false;
 //			m_pLoadedTextPath->GetPosVelAcc(0.02, final_pos, final_vel, final_acc);
 			if (!bInitializedTransitPosition){
-				final_pos[0] = 0;
-				final_pos[1] = 0;
+				IP->MaxVelocityVector->VecData			[0]	=	 2;
+				IP->MaxVelocityVector->VecData			[1]	=	 2;
+				IP->MaxVelocityVector->VecData			[2]	=	 1.5;
+				IP->MaxAccelerationVector->VecData		[0]	=	 0.7;
+				IP->MaxAccelerationVector->VecData		[1]	=	 0.7;
+				IP->MaxAccelerationVector->VecData		[2]	=	 0.5;
+				IP->MaxJerkVector->VecData				[0]	=	 1.0		;
+				IP->MaxJerkVector->VecData				[1]	=	 1.0		;
+				IP->MaxJerkVector->VecData				[2]	=	 1.0		;
+
+				final_pos[0] = outerRefPos[0];
+				final_pos[1] = outerRefPos[1];
 				final_pos[2] = -10;
 				final_pos[3] = outerRefPos[3];
 
 				final_vel[0] = 0; final_vel[1] = 0; final_vel[2] = 0;
 				final_acc[0] = 0; final_acc[1] = 0; final_acc[2] = 0;
 				bInitializedTransitPosition = true;
+			}
+			static bool b2ndInitialized = false;
+			if (!b2ndInitialized && outerRefPos[2] < -3){
+				final_pos[0] = 0;
+				final_pos[1] = 0;
+				b2ndInitialized = true;
 			}
 
 			QROTOR_REF temp_TransitionFinalRef;
@@ -7279,18 +7345,18 @@ void clsCTL::ConstructTransition2PathRef(double outerRefPos[4], double outerRefV
 			static double pathTotalTime = 0;
 			static bool bTotalPathTimeGetted = false;
 
-			if (!bTotalPathTimeGetted){
-				m_ReflexxesInitialized = false;
-				pathTotalTime = ReflexxesPathPlanning(_state.GetState(), temp_TransitionFinalRef, outerRefPos, outerRefVel, outerRefAcc);
-				bTotalPathTimeGetted = true;
-				printf("[ctl:Transition2] pathTotalTime: %.2f t: %.2f\n", pathTotalTime, tElapse);
-			}
-			ReflexxesPathPlanning(_state.GetState(), temp_TransitionFinalRef, outerRefPos, outerRefVel, outerRefAcc);
+//			if (!bTotalPathTimeGetted){
+//				m_ReflexxesInitialized = false;
+//				pathTotalTime = ReflexxesPathPlanning(_state.GetState(), temp_TransitionFinalRef, outerRefPos, outerRefVel, outerRefAcc);
+//				bTotalPathTimeGetted = true;
+//				printf("[ctl:Transition2] pathTotalTime: %.2f t: %.2f\n", pathTotalTime, tElapse);
+//			}
+//			ReflexxesPathPlanning(_state.GetState(), temp_TransitionFinalRef, outerRefPos, outerRefVel, outerRefAcc);
 
 			if(m_nCount%100 == 0){
 				printf("[ctl:Transition-2] totalPathTime %.2f; t: %.2f; pnr: %.2f %.2f %.2f %.2f; vnr: %.2f %.2f %.2f\n", pathTotalTime, tElapse, outerRefPos[0], outerRefPos[1], outerRefPos[2], outerRefPos[3], outerRefVel[0], outerRefVel[1], outerRefVel[2]);
 			}
-			if (tElapse > pathTotalTime){
+			if (ReflexxesPathPlanning(_state.GetState(), temp_TransitionFinalRef, outerRefPos, outerRefVel, outerRefAcc) < 0.2){
 				B5_t2 = -1;
 				m_bSAFMCPathTotalTimeGetted = false;
 				_state.SetEvent(EVENT_BEHAVIOREND, BEHAVIOR_PATHA);
@@ -7327,11 +7393,16 @@ void clsCTL::ConstructLandingPath(UAVSTATE state, double pnr[4], double vnr[3], 
 		temp_LandingFinalRef.p_y_r = B5_pnr[1];
 		temp_LandingFinalRef.p_z_r = 2;
 		temp_LandingFinalRef.psi_r = B5_pnr[3];
-		temp_LandingFinalRef.v_z_r = 0.3;
 
 		static double pathTotalTime;
 
 		if (!m_bSAFMCPathTotalTimeGetted){
+			IP->MaxVelocityVector->VecData			[0]	=	 2;
+			IP->MaxVelocityVector->VecData			[1]	=	 2;
+			IP->MaxVelocityVector->VecData			[2]	=	 0.4;
+			IP->MaxAccelerationVector->VecData		[0]	=	 0.7;
+			IP->MaxAccelerationVector->VecData		[1]	=	 0.7;
+			IP->MaxAccelerationVector->VecData		[2]	=	 0.5;
 			printf("[ctl:Landing] state: %.2f %.2f %.2f %.2f %.2f %.2f\n", state.x, state.y, state.z, state.ug, state.vg, state.wg);
 			pathTotalTime = ReflexxesPathPlanning(state, temp_LandingFinalRef, pnr, vnr, anr);
 			m_bSAFMCPathTotalTimeGetted = true;
