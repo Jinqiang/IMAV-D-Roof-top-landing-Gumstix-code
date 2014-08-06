@@ -118,8 +118,8 @@ int clsIM8::EveryRun()
 //		cout<<"p "<<m_gp8.gp8.p*180/PI<<" q "<<m_gp8.gp8.q*180/PI<<" r "<<m_gp8.gp8.r*180/PI<<endl;
 //		cout<<"acx "<<m_gp8.gp8.acx<<" acy "<<m_gp8.gp8.acy<<" acz "<<m_gp8.gp8.acz<<endl;
 
-//		printf("longitute: %.9f latitude: %.9f heading: %.2f\n",m_gp8.gp8.longitude*180/PI, m_gp8.gp8.latitude*180/PI, m_gp8.gp8.c*180/PI);
-//		cout<<"Number of satallites: "<<(int)(m_gp8.gp8.nGPS)<<endl;
+		printf("longitute: %.9f latitude: %.9f heading: %.2f\n",m_gp8.gp8.longitude*180/PI, m_gp8.gp8.latitude*180/PI, m_gp8.gp8.c*180/PI);
+		cout<<"Number of satallites: "<<(int)(m_gp8.gp8.nGPS)<<endl;
 //		cout<<"GPS fixed: "<<(m_gp8.gp8.gpsinfo & 0x03)<<endl;
 	}
 

@@ -18,8 +18,8 @@
 extern clsState _state;
 extern clsIM8 _im8;
 
-#define PAN_TRIM 3500
-#define TILT_TRIM 3300
+#define PAN_TRIM 3600
+#define TILT_TRIM 3000
 
 #define PTU2_PAN_TRIM 2400
 #define PTU2_TILT_TRIM 2400
@@ -82,8 +82,8 @@ int clsPTU::EveryRun()
 
 		PanTiltConpensateUAV(_state.GetState().a + m_panAngleOffset, _state.GetState().b + m_tiltAngleOffset,  &m_panAngle, &m_tiltAngle);
 
-		int nPan = int(PAN_TRIM - SVO_ANGLE_PAN_SCALING*m_panAngle*180/PI);
-		int nTilt = int(TILT_TRIM - SVO_ANGLE_TILT_SCALING*m_tiltAngle*180/PI);
+		int nPan = int(PAN_TRIM + SVO_ANGLE_PAN_SCALING*m_panAngle*180/PI);
+		int nTilt = int(TILT_TRIM + SVO_ANGLE_TILT_SCALING*m_tiltAngle*180/PI);
 
 		static bool ptu2HeadingAdjusted = false;
 		if (_ctl.GetLandingFinishFlag() && !ptu2HeadingAdjusted){

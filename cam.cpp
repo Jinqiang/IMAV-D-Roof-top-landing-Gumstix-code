@@ -142,9 +142,9 @@ void clsCAM::Input()
 
 				double camera_body[3] = {0};
 				B2G(abc, r_t_c, camera_body);
-				//camera_body[0] -= 0;
+				camera_body[0] += 0.13;
 				camera_body[1] += 0;
-				camera_body[2] -= 0.2;
+				camera_body[2] += 0.17;
 
 				//printf("[Cam Target Camera-BodyFrame] %d %d %.2f %.2f %.2f\n", m_dataFromVision.flags[0], m_dataFromVision.flags[1], camera_body[0], camera_body[1], camera_body[2]);
 				m_targetInfoUpdate.masterMind_time = m_dataFromVision.masterMind_time;
@@ -473,10 +473,11 @@ void clsCAM::ExitThread()
 
 DATASTRUCT_VISION2GUMSTIX clsCAM::GetVisionTargetInfo() {  //return relative position in NED frame;
 	m_targetInfoUpdate.nedFrame_dvec[2] = m_targetInfoUpdate.nedFrame_dvec[2]*(-1);
+	if (::fabs(m_targetInfoUpdate.nedFrame_dvec[2]) > 10)
+		m_targetInfoUpdate.flags[0] = false;
 
-//	m_targetInfoUpdate.flags[0] = true;
-//	m_targetInfoUpdate.nedFrame_dvec[0] = 0;
-//	m_targetInfoUpdate.nedFrame_dvec[1] = 0.02;
+	if (::fabs(m_targetInfoUpdate.nedFrame_dvec[2]) < 0.5)
+		m_targetInfoUpdate.flags[0] = false;
 
 	return m_targetInfoUpdate;
 }

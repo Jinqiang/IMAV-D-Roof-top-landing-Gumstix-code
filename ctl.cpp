@@ -2300,9 +2300,13 @@ void clsCTL::A8()				//for engine up and down control (auto takeoff/landing)
 	if (A8_mode == A8MODE_ENGINEDOWN) {
 		m_sig.aileron = 0; m_sig.elevator = 0; m_sig.rudder = 0; m_sig.throttle = 0;
 		static double startTime = ::GetTime();
-		if (GetTime() - startTime > 3*60){
+		if (GetTime() - startTime > 10*60){
 			_state.SetEvent(EVENT_BEHAVIOREND, BEHAVIOR_ENGINEDOWN);
 			printf("[ctl::A8] Task Finished\n");
+
+			if(m_nCount%50 == 0){
+				printf("[TaskStartTime]: %.2f\n", GetTime() - startTime);
+			}
 		}
 	}
 
@@ -2787,7 +2791,7 @@ void clsCTL::AutoPathGeneration()
 	else if ( IsPathSmooth() ) {
 		if ( m_pPlan!=NULL ) {
 			if ( m_pPlan->GetPlanID() == 2 ) {// take-off plan
-				ConstructTakeOffPath(state, -5, B5_pnr, B5_vnr, B5_anr);
+				ConstructTakeOffPath(state, -1.3, B5_pnr, B5_vnr, B5_anr);
 			}
 			else if ( m_pPlan->GetPlanID() == 3 ) {// landing plan
 //				_pathTmp.CreateLandingPathOnline(&state, B5_pnr, B5_vnr, B5_anr);
@@ -6523,6 +6527,13 @@ int cls2014SAFMCPlan::Run(){
 				_ctl.SetIntegratorFlag();
 				_ctl.SetTransition1Flag();
 				m_behavior.behavior = BEHAVIOR_PATHA;
+
+//				_state.ClearEvent();
+//				m_mode = VISION_INITIALIZATION;
+//				_ctl.ResetTakeOffFlag();
+//				_ctl.SetIntegratorFlag();
+//				_ctl.SetVisionInitializationFlag();
+//				m_behavior.behavior = BEHAVIOR_PATHA;
 			}
 			break;
 
@@ -7178,12 +7189,12 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 
 	if (!local_QROTOR_REF_initialized){
 		local_QROTOR_REF_initialized = true;
-		IP->MaxVelocityVector->VecData			[0]	=	 2;
-		IP->MaxVelocityVector->VecData			[1]	=	 2;
+		IP->MaxVelocityVector->VecData			[0]	=	 1;
+		IP->MaxVelocityVector->VecData			[1]	=	 1;
 		IP->MaxVelocityVector->VecData			[2]	=	 0.3;
-		IP->MaxAccelerationVector->VecData		[0]	=	 0.7;
-		IP->MaxAccelerationVector->VecData		[1]	=	 0.7;
-		IP->MaxAccelerationVector->VecData		[2]	=	 0.5;
+		IP->MaxAccelerationVector->VecData		[0]	=	 0.3;
+		IP->MaxAccelerationVector->VecData		[1]	=	 0.3;
+		IP->MaxAccelerationVector->VecData		[2]	=	 0.4;
 
 		memset(&local_visionGuidanceXYRef, 0, sizeof(QROTOR_REF));
 
@@ -7194,12 +7205,14 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 		local_visionGuidanceXYRef.psi_r = outerRefPos[3];
 	}
 	// Vision guidance phase, guide the UAV to the target area;
-	if (_cam.GetVisionTargetInfo().flags[0] && m_nCount%10 == 0){
-		local_visionGuidanceXYRef.p_x_r = outerRefPos[0] + _cam.GetVisionTargetInfo().nedFrame_dvec[0];
-		local_visionGuidanceXYRef.p_y_r = outerRefPos[1] + _cam.GetVisionTargetInfo().nedFrame_dvec[1];
+	if (_cam.GetVisionTargetInfo().flags[0] && m_nCount%50 == 0){
+		local_visionGuidanceXYRef.p_x_r = /*_state.GetState().x*/ outerRefPos[0] + _cam.GetVisionTargetInfo().nedFrame_dvec[0];
+		local_visionGuidanceXYRef.p_y_r = /*_state.GetState().y */outerRefPos[1] + _cam.GetVisionTargetInfo().nedFrame_dvec[1];
 		if (sqrt(pow(_cam.GetVisionTargetInfo().nedFrame_dvec[0], 2) + pow(_cam.GetVisionTargetInfo().nedFrame_dvec[1], 2)) < 0.4){
+			printf("[ctl] Landing start!\n");
 			local_startLandingFlag = true;
 		}
+		printf("[GetVisionTargetInfo] %.2f %.2f %.2f \n", _cam.GetVisionTargetInfo().nedFrame_dvec[0], _cam.GetVisionTargetInfo().nedFrame_dvec[1], _cam.GetVisionTargetInfo().nedFrame_dvec[2]);
 	}
 
 	local_outerXYRefPos[2] = local_visionGuidanceXYRef.p_z_r;
@@ -7222,9 +7235,9 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 			tStart = ::GetTime();
 		}
 		double tElapse = ::GetTime() - tStart;
-		double velDown = 0.5;
-		double accDown = 0.25;
-		double velSlow = 0.2;
+		double velDown = 0.3;
+		double accDown = 0.3;
+		double velSlow = 0.3;
 		double tRamp = velDown / accDown;
 		double dt = 0.02;
 
@@ -7254,12 +7267,12 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 		}
 	}
 	/// end
-	if(m_nCount%50 == 0){
-		printf("[visionGuidance] B5_pnr: %.2f %.2f %.2f %.2f; B5_vnr: %.2f %.2f %.2f\n", outerRefPos[0], outerRefPos[1], outerRefPos[2], outerRefPos[3], outerRefVel[0], outerRefVel[1], outerRefVel[2]);
-	}
+//	if(m_nCount%50 == 0){
+//		printf("[visionGuidance] B5_pnr: %.2f %.2f %.2f %.2f; B5_vnr: %.2f %.2f %.2f\n", outerRefPos[0], outerRefPos[1], outerRefPos[2], outerRefPos[3], outerRefVel[0], outerRefVel[1], outerRefVel[2]);
+//	}
 	// finish the vision guidance phase;
 
-	if ( outerRefPos[2] > 0.5 ){
+	if ( outerRefPos[2] > 0.2 ){
 		//UAV is in the target area, can drop the payload, then finish the vision guidance phase;
 		_im9.SetDropSAFMC2014Target();
 		_ctl.SetSAFMCTargetDropped();
