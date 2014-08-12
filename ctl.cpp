@@ -2802,7 +2802,7 @@ void clsCTL::AutoPathGeneration()
 			}
 			else if (m_pPlan->GetPlanID() == 4){ //2014 SAFMC plan
 				if (_ctl.GetTakeOffFlag()){
-				    ConstructTakeOffPath(state, -30, B5_pnr, B5_vnr, B5_anr);
+				    ConstructTakeOffPath(state, -35, B5_pnr, B5_vnr, B5_anr);
 				}
 				else if (_ctl.GetTransition1Flag()) {
 					_ctl.ConstructTransition1PathRef(B5_pnr, B5_vnr, B5_anr);
@@ -6176,6 +6176,7 @@ void clsCTL::Init()
 	B5_wg0 = 0;
 	m_bSAFMCPathTotalTimeGetted = false;
 	m_bSAFMCtargetDropped = false;
+	m_bVisionInitializationFail = false;
 	/*End <-- Variables initialization for 2014 SAFMC by LPD, 2014-Mar-05*/
 
 	B_acxr_ub = 0 ;
@@ -6506,6 +6507,14 @@ int cls2014SAFMCPlan::Run(){
 			m_mode = ENGINE_UP;
 			_ctl.ResetIntegratorFlag();
 			m_behavior.behavior = BEHAVIOR_ENGINEUP;
+
+//			_state.ClearEvent();
+//			m_mode = TAKEING_OFF;
+//			_ctl.SetTakeOffFlag();
+//			m_behavior.behavior = BEHAVIOR_PATHA;
+//			(int &)m_behavior.parameter[0] = -1;
+//			(int &)m_behavior.parameter[4] = PATHTRACKING_FIXED;
+
 		}
 		break;
 
@@ -6574,28 +6583,12 @@ int cls2014SAFMCPlan::Run(){
 			break;
 		case VISION_INITIALIZATION:
 			if ( (event.code == EVENT_BEHAVIOREND && (int &)event.info[0] == BEHAVIOR_PATHA) ){
-				if (_ctl.GetSAFMCTargetDropped()){
-					_state.ClearEvent();
-					m_mode = TRANSITION_2;
-					_ctl.SetIntegratorFlag();
-					_ctl.ResetVisionInitializationFlag();
-					_ctl.SetTransition2Flag();
-					m_behavior.behavior = BEHAVIOR_PATHA;
-
-//					_state.ClearEvent();
-//					m_mode = LANDING;
-//					_ctl.ResetVisionInitializationFlag();
-//					_ctl.SetLandingFlag();
-//					m_behavior.behavior = BEHAVIOR_PATHA;
-				}
-				else{
 					_state.ClearEvent();
 					m_mode = VISION_GUIDANCE;
 					_ctl.ResetIntegratorFlag();
 					_ctl.ResetVisionInitializationFlag();
 					_ctl.SetVisionGuidanceFlag();
 					m_behavior.behavior = BEHAVIOR_PATHA;
-				}
 			}
 			break;
 		case VISION_GUIDANCE:
@@ -7034,7 +7027,7 @@ void clsCTL::ConstructTransition1PathRef(double outerRefPos[4], double outerRefV
 
 			if( sqrt(delta[0]*delta[0] + delta[1]*delta[1]) < 3 ){
 				//TODO: Reached the roof top;
-				final_pos[2] = -8 - ABSOLUTE_IMAVD_ROOF_HEIGHT;
+				final_pos[2] = -7.5 - ABSOLUTE_IMAVD_ROOF_HEIGHT;
 				height_adjusted = true;
 			}
 			firstTimeEnter = false;
@@ -7060,8 +7053,8 @@ void clsCTL::ConstructTransition1PathRef(double outerRefPos[4], double outerRefV
 		static double pathTotalTime;
 
 		if (!m_bSAFMCPathTotalTimeGetted){
-			IP->MaxVelocityVector->VecData			[2]	=	 1;
-			IP->MaxAccelerationVector->VecData		[2]	=	 0.5;
+			IP->MaxVelocityVector->VecData			[2]	=	 0.4;
+			IP->MaxAccelerationVector->VecData		[2]	=	 0.3;
 
 			printf("[ctl:Transition-1] final_pos: %.2f %.2f %.2f\n", final_pos[0], final_pos[1], final_pos[2]);
 //			m_ReflexxesInitialized = false;
@@ -7105,8 +7098,8 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 	///calculate the searching area waypoint
 	///depends on the search radius and step size;
 	int stepSize = 7; // 7 meters
-	int totalNumWayPoint = 9;
-	double wayPoint[18] = {
+	int totalNumWayPoint = 10;
+	double wayPoint[20] = {
 			0, 0,
 			stepSize, 0,
 			0, stepSize,
@@ -7115,7 +7108,8 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 			0, -1*stepSize,
 			0, -1*stepSize,
 			stepSize, 0,
-			stepSize, 0
+			stepSize, 0,
+			-1*stepSize, stepSize
 	};
 
 	/// Generate the path references for the search path;
@@ -7146,8 +7140,14 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 				local_tStartInitialized = true;
 				tStartHover = ::GetTime();
 			}
-
-			if (::GetTime() - tStartHover > 30){
+			if (passedWayPointCount < 9){
+				if (::GetTime() - tStartHover > 20){
+					local_QROTOR_REF_initialized = false;
+					passedWayPointCount++;
+					local_tStartInitialized = false;
+				}
+			}
+			else{
 				local_QROTOR_REF_initialized = false;
 				passedWayPointCount++;
 				local_tStartInitialized = false;
@@ -7181,6 +7181,7 @@ void clsCTL::ConstructVisionInitializationPathref(double outerRefPos[4], double 
 	if (passedWayPointCount == totalNumWayPoint && !local_tStartInitialized){
 			/* If still cannot detect the target after
 			 * the searching path, then return home;*/
+			m_bVisionInitializationFail = true;
 			_im9.SetDropSAFMC2014Target();
 			_ctl.SetSAFMCTargetDropped();
 			B5_t2 = -1;
@@ -7239,8 +7240,9 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 	outerRefVel[0] = local_outerXYRefVel[0]; outerRefVel[1] = local_outerXYRefVel[1];
 	outerRefAcc[0] = local_outerXYRefAcc[0]; outerRefAcc[1] = local_outerXYRefAcc[1];
 
+	static double startTime = ::GetTime();
 	/// Generate references for z direction;
-	if (local_startLandingFlag){
+	if (local_startLandingFlag || m_bVisionInitializationFail || ::GetTime() - startTime > 60){
 		static bool local_startTimeInitialized = false;
 		static double tStart = 0;
 		if (!local_startTimeInitialized){
@@ -7280,9 +7282,9 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 		}
 	}
 	/// end
-//	if(m_nCount%50 == 0){
-//		printf("[visionGuidance] B5_pnr: %.2f %.2f %.2f %.2f; B5_vnr: %.2f %.2f %.2f\n", outerRefPos[0], outerRefPos[1], outerRefPos[2], outerRefPos[3], outerRefVel[0], outerRefVel[1], outerRefVel[2]);
-//	}
+	if(m_nCount%50 == 0){
+		printf("[visionGuidance] B5_pnr: %.2f %.2f %.2f %.2f; B5_vnr: %.2f %.2f %.2f\n", outerRefPos[0], outerRefPos[1], outerRefPos[2], outerRefPos[3], outerRefVel[0], outerRefVel[1], outerRefVel[2]);
+	}
 	// finish the vision guidance phase;
 	if ( /*outerRefPos[2] > (-1)*(ABSOLUTE_IMAVD_ROOF_HEIGHT -0.5)*/ m_sig.throttle < 0.3 ){
 		//UAV is in the target area, can drop the payload, then finish the vision guidance phase;
@@ -7317,7 +7319,7 @@ void clsCTL::ConstructTransition2PathRef(double outerRefPos[4], double outerRefV
 
 				final_pos[0] = outerRefPos[0];
 				final_pos[1] = outerRefPos[1];
-				final_pos[2] = -30;
+				final_pos[2] = -35;
 				final_pos[3] = outerRefPos[3];
 
 				final_vel[0] = 0; final_vel[1] = 0; final_vel[2] = 0;
@@ -7325,7 +7327,7 @@ void clsCTL::ConstructTransition2PathRef(double outerRefPos[4], double outerRefV
 				bInitializedTransitPosition = true;
 			}
 			static bool b2ndInitialized = false;
-			if (!b2ndInitialized && outerRefPos[2] < -27){
+			if (!b2ndInitialized && outerRefPos[2] < -33){
 				final_pos[0] = 0;
 				final_pos[1] = 0;
 				b2ndInitialized = true;
@@ -7359,7 +7361,7 @@ void clsCTL::ConstructTransition2PathRef(double outerRefPos[4], double outerRefV
 			}
 
 			if(m_nCount%100 == 0){
-				printf("[visionGuidance] B5_pnr: %.2f %.2f %.2f %.2f; B5_vnr: %.2f %.2f %.2f\n", outerRefPos[0], outerRefPos[1], outerRefPos[2], outerRefPos[3], outerRefVel[0], outerRefVel[1], outerRefVel[2]);
+				printf("[Transition-2] B5_pnr: %.2f %.2f %.2f %.2f; B5_vnr: %.2f %.2f %.2f\n", outerRefPos[0], outerRefPos[1], outerRefPos[2], outerRefPos[3], outerRefVel[0], outerRefVel[1], outerRefVel[2]);
 			}
 }
 

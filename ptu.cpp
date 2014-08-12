@@ -22,7 +22,7 @@ extern clsIM8 _im8;
 #define TILT_TRIM 3000
 
 #define PTU2_PAN_TRIM 2400
-#define PTU2_TILT_TRIM 2200
+#define PTU2_TILT_TRIM 1950
 
 #define SVO_ANGLE_PAN_SCALING (18.1594) //angle in degrees
 #define SVO_ANGLE_TILT_SCALING (-18.1594)
@@ -57,7 +57,7 @@ BOOL clsPTU::InitThread()
 	tcflush(m_nsPTU, TCIOFLUSH);
 
 	m_panAngle = 0; m_tiltAngle = 0;
-	m_PTU2_panAngle = 0; m_PTU2_tiltAngle = 20;
+	m_PTU2_panAngle = 0; m_PTU2_tiltAngle = -5;
 
 	m_panAngleOffset = 0; m_tiltAngleOffset = 0;
 	m_PTU2_panAngleOffset = 0; m_PTU2_tiltAngleOffset = 0;
@@ -95,18 +95,13 @@ int clsPTU::EveryRun()
 			m_PTU2_panAngle = INPI(m_PTU2_panAngle);
 			///Convert unit in degrees
 			m_PTU2_panAngle = m_PTU2_panAngle*180/PI;
-			m_PTU2_panAngle = range(m_PTU2_panAngle, -15, 15);
 			ptu2HeadingAdjusted = true;
 		}
 
-		static bool bPTU2Initialized = false;
-		if (!bPTU2Initialized){
-			m_PTU2_tiltAngle = m_PTU2_tiltAngle - 0.02;
-		}
-		if (m_PTU2_tiltAngle < 0){
-			bPTU2Initialized = true;
-		}
+		m_PTU2_panAngle = range(m_PTU2_panAngle, -20, 20);
+		m_PTU2_tiltAngle = range(m_PTU2_tiltAngle, -20, 20);
 
+		//printf("[ptu] panAngle: %.2f %.2f\n",m_PTU2_panAngle, m_PTU2_tiltAngle);
 		int nPTU2_Pan = int(PTU2_PAN_TRIM - SVO_ANGLE_PAN_SCALING*m_PTU2_panAngle);
 		int nPTU2_Tilt = int(PTU2_TILT_TRIM - SVO_ANGLE_TILT_SCALING*m_PTU2_tiltAngle);
 

@@ -327,6 +327,7 @@ private:
 	double B5_wg0;
 	bool m_bSAFMCPathTotalTimeGetted;
 	bool m_bSAFMCtargetDropped;
+	bool m_bVisionInitializationFail;
 	clsPath *m_pLoadedTextPath;
 public:
 	void SetSAFMCTargetDropped() {m_bSAFMCtargetDropped = true;}

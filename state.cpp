@@ -968,6 +968,17 @@ if (m_nCount % _DEBUG_COUNT == 0) {
 	m_stateSimulation.c += _dx[3];
 
 	B2G(&m_stateSimulation.a, &m_stateSimulation.u, &m_stateSimulation.ug);
+
+	if (_ctl.GetVisionGuidanceFlag()){
+		if (m_stateSimulation.z > -3)
+		{
+			m_stateSimulation.z = -3;
+			m_stateSimulation.w = 0;
+			m_stateSimulation.wg = 0;
+			m_stateSimulation.u  = 0; m_stateSimulation.v = 0;
+			m_stateSimulation.ug = 0; m_stateSimulation.vg  = 0;
+		}
+	}
 	m_state0 = m_stateSimulation;
 
 	INPI(m_state0.a);
