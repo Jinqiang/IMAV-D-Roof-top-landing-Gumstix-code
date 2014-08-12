@@ -872,9 +872,9 @@ void clsState::LinearModelSimulate_QuadLion()
 		m_stateSimulation.bs = m_equ.bs;
 //		m_stateSimulation.rfb = m_equ.rfb;
 
-		m_stateSimulation.z = -10;
-		m_latitude0 = 1.38*PI/180;
-		m_longitude0 = 103.8*PI/180;
+		m_stateSimulation.z = 0;
+		m_latitude0 = 52.14258*PI/180;
+		m_longitude0 = 5.83996*PI/180;
 		m_altitude0 = 0;
 		m_stateSimulation.latitude = m_latitude0;
 		m_stateSimulation.longitude = m_longitude0;
@@ -968,7 +968,6 @@ if (m_nCount % _DEBUG_COUNT == 0) {
 	m_stateSimulation.c += _dx[3];
 
 	B2G(&m_stateSimulation.a, &m_stateSimulation.u, &m_stateSimulation.ug);
-
 	m_state0 = m_stateSimulation;
 
 	INPI(m_state0.a);

@@ -22,7 +22,7 @@ extern clsIM8 _im8;
 #define TILT_TRIM 3000
 
 #define PTU2_PAN_TRIM 2400
-#define PTU2_TILT_TRIM 2400
+#define PTU2_TILT_TRIM 2200
 
 #define SVO_ANGLE_PAN_SCALING (18.1594) //angle in degrees
 #define SVO_ANGLE_TILT_SCALING (-18.1594)
@@ -57,7 +57,7 @@ BOOL clsPTU::InitThread()
 	tcflush(m_nsPTU, TCIOFLUSH);
 
 	m_panAngle = 0; m_tiltAngle = 0;
-	m_PTU2_panAngle = 0; m_PTU2_tiltAngle = 0;
+	m_PTU2_panAngle = 0; m_PTU2_tiltAngle = 20;
 
 	m_panAngleOffset = 0; m_tiltAngleOffset = 0;
 	m_PTU2_panAngleOffset = 0; m_PTU2_tiltAngleOffset = 0;
@@ -74,16 +74,18 @@ int clsPTU::EveryRun()
 		pan[0] = tilt[0] = PTU2_pan[0] = PTU2_tilt[0] = 0x80;
 		pan[1] = tilt[1] = PTU2_pan[1] = PTU2_tilt[1] = 0x01;
 		pan[2] = tilt[2] = PTU2_pan[2] = PTU2_tilt[2] =0x04;
-		pan[3] = 0;	// servo channel 0
-		tilt[3] = 1; // servo channel 1
-		PTU2_pan[3] = 2;
-		PTU2_tilt[3] = 3;
+		pan[3] = 1;	// servo channel 0
+		tilt[3] = 2; // servo channel 1
+		PTU2_pan[3] = 3;
+		PTU2_tilt[3] = 4;
 
 
 		PanTiltConpensateUAV(_state.GetState().a + m_panAngleOffset, _state.GetState().b + m_tiltAngleOffset,  &m_panAngle, &m_tiltAngle);
 
-		int nPan = int(PAN_TRIM + SVO_ANGLE_PAN_SCALING*m_panAngle*180/PI);
+		int nPan =  int(PAN_TRIM + SVO_ANGLE_PAN_SCALING*m_panAngle*180/PI);
 		int nTilt = int(TILT_TRIM + SVO_ANGLE_TILT_SCALING*m_tiltAngle*180/PI);
+		range(nPan, PAN_TRIM - 200, PAN_TRIM + 200);
+		range(nTilt, TILT_TRIM - 200, TILT_TRIM + 200);
 
 		static bool ptu2HeadingAdjusted = false;
 		if (_ctl.GetLandingFinishFlag() && !ptu2HeadingAdjusted){
@@ -96,9 +98,20 @@ int clsPTU::EveryRun()
 			m_PTU2_panAngle = range(m_PTU2_panAngle, -15, 15);
 			ptu2HeadingAdjusted = true;
 		}
-		//m_PTU2_panAngle = 10; m_PTU2_tiltAngle = 10;
+
+		static bool bPTU2Initialized = false;
+		if (!bPTU2Initialized){
+			m_PTU2_tiltAngle = m_PTU2_tiltAngle - 0.02;
+		}
+		if (m_PTU2_tiltAngle < 0){
+			bPTU2Initialized = true;
+		}
+
 		int nPTU2_Pan = int(PTU2_PAN_TRIM - SVO_ANGLE_PAN_SCALING*m_PTU2_panAngle);
 		int nPTU2_Tilt = int(PTU2_TILT_TRIM - SVO_ANGLE_TILT_SCALING*m_PTU2_tiltAngle);
+
+		range(nPTU2_Pan, PTU2_PAN_TRIM - 200, PTU2_PAN_TRIM + 200);
+		range(nPTU2_Tilt, PTU2_TILT_TRIM - 200, PTU2_TILT_TRIM + 200);
 
 		pan[4] = nPan / 128; pan[5] = nPan % 128;
 		tilt[4] = nTilt / 128; tilt[5] = nTilt % 128;

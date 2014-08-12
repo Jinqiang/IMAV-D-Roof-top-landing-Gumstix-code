@@ -141,40 +141,48 @@ void clsCMM::SendAllMessages()
 
 int clsCMM::EveryRun()
 {
-
-
 	TELEGRAPH tele;
-	if (m_nCount % 10 != 0 ) return TRUE;
-	/* Check whether the socket connection is still alive */
-	static bool bStartTimeInitialized = false;
-	if (m_bLostConnection){
-		// connection lost, ping every 5 s
-		if (!bStartTimeInitialized){
-			m_LostConnectionTime = ::GetTime();
-			bStartTimeInitialized = true;
-		}
+	if (m_nCount % 50 != 0 ) return TRUE;
 
-		if (::GetTime() - m_LostConnectionTime > 10){
-			if (system("ping -s 1 -c 1 -w 1 192.168.1.1 >> /fs/sd/null"))
-				{
-					m_bLostConnection = true;
-					bStartTimeInitialized = false;
-					return TRUE;
-				}
-			else{
-				m_bLostConnection = false;
-			}
-		}
-		return TRUE;
+	static bool bStopCMM = false;
+	if (_ctl.GetTransition1Flag()){
+		bStopCMM = true;
 	}
-	else{
-		if (system("ping -s 1 -c 1 -w 1 192.168.1.1 >> /fs/sd/null"))
-			{
-				m_bLostConnection = true;
-				bStartTimeInitialized = false;
-				return TRUE;
-			}
+
+	if (bStopCMM) {
+		return true;
 	}
+
+	/* Check whether the socket connection is still alive */
+//	static bool bStartTimeInitialized = false;
+//	if (m_bLostConnection){
+//		// connection lost, ping every 5 s
+//		if (!bStartTimeInitialized){
+//			m_LostConnectionTime = ::GetTime();
+//			bStartTimeInitialized = true;
+//		}
+//
+//		if (::GetTime() - m_LostConnectionTime > 10){
+//			if (system("ping -s 1 -c 1 -w 1 192.168.1.1 >> /fs/sd/null"))
+//				{
+//					m_bLostConnection = true;
+//					bStartTimeInitialized = false;
+//					return TRUE;
+//				}
+//			else{
+//				m_bLostConnection = false;
+//			}
+//		}
+//		return TRUE;
+//	}
+//	else{
+//		if (system("ping -s 1 -c 1 -w 1 192.168.1.1 >> /fs/sd/null"))
+//			{
+//				m_bLostConnection = true;
+//				bStartTimeInitialized = false;
+//				return TRUE;
+//			}
+//	}
 	/* End of connection checking */
 
 	SendAllMessages();

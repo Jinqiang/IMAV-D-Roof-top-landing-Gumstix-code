@@ -31,6 +31,8 @@ extern EQUILIBRIUM _equ_Hover;
 #define SAFMC_TARGET_X (9.2)
 #define SAFMC_TARGET_Y (-3.5)
 
+#define ABSOLUTE_IMAVD_ROOF_HEIGHT (3) //units in meters;
+
 clsPath::clsPath()
 {
   SAMFC = FALSE;
@@ -2298,7 +2300,8 @@ void clsCTL::A8()				//for engine up and down control (auto takeoff/landing)
 	}
 
 	if (A8_mode == A8MODE_ENGINEDOWN) {
-		m_sig.aileron = 0; m_sig.elevator = 0; m_sig.rudder = 0; m_sig.throttle = 0;
+		m_sig.aileron = 0; m_sig.elevator = 0;
+		m_sig.rudder = 0; m_sig.throttle = 0;
 		static double startTime = ::GetTime();
 		if (GetTime() - startTime > 10*60){
 			_state.SetEvent(EVENT_BEHAVIOREND, BEHAVIOR_ENGINEDOWN);
@@ -2799,7 +2802,7 @@ void clsCTL::AutoPathGeneration()
 			}
 			else if (m_pPlan->GetPlanID() == 4){ //2014 SAFMC plan
 				if (_ctl.GetTakeOffFlag()){
-				    ConstructTakeOffPath(state, -7.5, B5_pnr, B5_vnr, B5_anr);
+				    ConstructTakeOffPath(state, -30, B5_pnr, B5_vnr, B5_anr);
 				}
 				else if (_ctl.GetTransition1Flag()) {
 					_ctl.ConstructTransition1PathRef(B5_pnr, B5_vnr, B5_anr);
@@ -6588,7 +6591,7 @@ int cls2014SAFMCPlan::Run(){
 				else{
 					_state.ClearEvent();
 					m_mode = VISION_GUIDANCE;
-					_ctl.SetIntegratorFlag();
+					_ctl.ResetIntegratorFlag();
 					_ctl.ResetVisionInitializationFlag();
 					_ctl.SetVisionGuidanceFlag();
 					m_behavior.behavior = BEHAVIOR_PATHA;
@@ -7002,7 +7005,7 @@ void clsCTL::ConstructTransition1PathRef(double outerRefPos[4], double outerRefV
 
 		//update the roof location regularly in 0.1 Hz;
 		static bool firstTimeEnter = true;
-		if( firstTimeEnter || m_nCount%500 == 0){
+		if( firstTimeEnter || m_nCount%50 == 0){
 			double roof_latitude, roof_longitude, roof_heading;
 			_parser.GetVariable("_ROOF_LATITUDE", &roof_latitude);
 			_parser.GetVariable("_ROOF_LONGTITUDE", &roof_longitude);
@@ -7019,18 +7022,20 @@ void clsCTL::ConstructTransition1PathRef(double outerRefPos[4], double outerRefV
 
 			final_pos[0] = outerRefPos[0] + delta[0];
 			final_pos[1] = outerRefPos[1] + delta[1];
-			final_pos[2] = outerRefPos[2];
+
+			static bool height_adjusted = false;
+			if (!height_adjusted){
+				final_pos[2] = outerRefPos[2];
+			}
 			final_pos[3] = roof_heading;
 
 			final_vel[0] = 0; final_vel[1] = 0; final_vel[2] = 0;
 			final_acc[0] = 0; final_acc[1] = 0; final_acc[2] = 0;
 
-			if( sqrt(delta[0]*delta[0] + delta[1]*delta[1]) < 1 ){
+			if( sqrt(delta[0]*delta[0] + delta[1]*delta[1]) < 3 ){
 				//TODO: Reached the roof top;
-				B5_t2 = -1;
-				m_bSAFMCPathTotalTimeGetted = false;
-				_state.SetEvent(EVENT_BEHAVIOREND, BEHAVIOR_PATHA);
-				printf("[ctl:plan 4]: Roof top reached!!\n");
+				final_pos[2] = -8 - ABSOLUTE_IMAVD_ROOF_HEIGHT;
+				height_adjusted = true;
 			}
 			firstTimeEnter = false;
 		}
@@ -7055,6 +7060,9 @@ void clsCTL::ConstructTransition1PathRef(double outerRefPos[4], double outerRefV
 		static double pathTotalTime;
 
 		if (!m_bSAFMCPathTotalTimeGetted){
+			IP->MaxVelocityVector->VecData			[2]	=	 1;
+			IP->MaxAccelerationVector->VecData		[2]	=	 0.5;
+
 			printf("[ctl:Transition-1] final_pos: %.2f %.2f %.2f\n", final_pos[0], final_pos[1], final_pos[2]);
 //			m_ReflexxesInitialized = false;
 			pathTotalTime = ReflexxesPathPlanning(_state.GetState(), temp_TransitionFinalRef, outerRefPos, outerRefVel, outerRefAcc);
@@ -7062,7 +7070,12 @@ void clsCTL::ConstructTransition1PathRef(double outerRefPos[4], double outerRefV
 			m_bSAFMCPathTotalTimeGetted = true;
 		}
 
-		ReflexxesPathPlanning(_state.GetState(), temp_TransitionFinalRef, outerRefPos, outerRefVel, outerRefAcc);
+		if (ReflexxesPathPlanning(_state.GetState(), temp_TransitionFinalRef, outerRefPos, outerRefVel, outerRefAcc) < 0.2){
+			B5_t2 = -1;
+			m_bSAFMCPathTotalTimeGetted = false;
+			_state.SetEvent(EVENT_BEHAVIOREND, BEHAVIOR_PATHA);
+			printf("[ctl:plan 4]: Roof top reached!!\n");
+		}
 
 		if(m_nCount%100 == 0){
 			printf("[ctl:Transition-1 Path] totalPathTime %.2f; pnr: %.2f %.2f %.2f %.2f; vnr: %.2f %.2f %.2f\n", pathTotalTime, outerRefPos[0], outerRefPos[1], outerRefPos[2], outerRefPos[3], outerRefVel[0], outerRefVel[1], outerRefVel[2]);
@@ -7253,7 +7266,7 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 				outerRefPos[2] += outerRefVel[2]*dt;
 			}
 		}
-		else if( fabs(_state.GetState().z) < 5  ){ //8cm - 5m, decrease to 0.2m/s
+		else if( fabs(_state.GetState().z) < 5  ){ //8cm - 5m, decrease to 0.3m/s
 			outerRefAcc[2] = 0;
 			if(outerRefVel[2] > velSlow){
 				outerRefAcc[2] = -accDown;
@@ -7271,8 +7284,7 @@ void clsCTL::ConstructVisionGuidancePathRef(double outerRefPos[4], double outerR
 //		printf("[visionGuidance] B5_pnr: %.2f %.2f %.2f %.2f; B5_vnr: %.2f %.2f %.2f\n", outerRefPos[0], outerRefPos[1], outerRefPos[2], outerRefPos[3], outerRefVel[0], outerRefVel[1], outerRefVel[2]);
 //	}
 	// finish the vision guidance phase;
-
-	if ( outerRefPos[2] > 0.2 ){
+	if ( /*outerRefPos[2] > (-1)*(ABSOLUTE_IMAVD_ROOF_HEIGHT -0.5)*/ m_sig.throttle < 0.3 ){
 		//UAV is in the target area, can drop the payload, then finish the vision guidance phase;
 		_im9.SetDropSAFMC2014Target();
 		_ctl.SetSAFMCTargetDropped();
@@ -7305,7 +7317,7 @@ void clsCTL::ConstructTransition2PathRef(double outerRefPos[4], double outerRefV
 
 				final_pos[0] = outerRefPos[0];
 				final_pos[1] = outerRefPos[1];
-				final_pos[2] = -10;
+				final_pos[2] = -30;
 				final_pos[3] = outerRefPos[3];
 
 				final_vel[0] = 0; final_vel[1] = 0; final_vel[2] = 0;
@@ -7313,7 +7325,7 @@ void clsCTL::ConstructTransition2PathRef(double outerRefPos[4], double outerRefV
 				bInitializedTransitPosition = true;
 			}
 			static bool b2ndInitialized = false;
-			if (!b2ndInitialized && outerRefPos[2] < -3){
+			if (!b2ndInitialized && outerRefPos[2] < -27){
 				final_pos[0] = 0;
 				final_pos[1] = 0;
 				b2ndInitialized = true;
