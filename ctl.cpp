@@ -31,7 +31,7 @@ extern EQUILIBRIUM _equ_Hover;
 #define SAFMC_TARGET_X (9.2)
 #define SAFMC_TARGET_Y (-3.5)
 
-#define ABSOLUTE_IMAVD_ROOF_HEIGHT (3) //units in meters;
+#define ABSOLUTE_IMAVD_ROOF_HEIGHT (6) //units in meters;
 
 clsPath::clsPath()
 {
@@ -2303,7 +2303,7 @@ void clsCTL::A8()				//for engine up and down control (auto takeoff/landing)
 		m_sig.aileron = 0; m_sig.elevator = 0;
 		m_sig.rudder = 0; m_sig.throttle = 0;
 		static double startTime = ::GetTime();
-		if (GetTime() - startTime > 10*60){
+		if (GetTime() - startTime > 3*60){
 			_state.SetEvent(EVENT_BEHAVIOREND, BEHAVIOR_ENGINEDOWN);
 			printf("[ctl::A8] Task Finished\n");
 
@@ -7053,7 +7053,7 @@ void clsCTL::ConstructTransition1PathRef(double outerRefPos[4], double outerRefV
 		static double pathTotalTime;
 
 		if (!m_bSAFMCPathTotalTimeGetted){
-			IP->MaxVelocityVector->VecData			[2]	=	 0.4;
+			IP->MaxVelocityVector->VecData			[2]	=	 0.5;
 			IP->MaxAccelerationVector->VecData		[2]	=	 0.3;
 
 			printf("[ctl:Transition-1] final_pos: %.2f %.2f %.2f\n", final_pos[0], final_pos[1], final_pos[2]);
